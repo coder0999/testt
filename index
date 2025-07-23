@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>موقعي الموحد</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f2f2f2;
+      color: #222;
+    }
+    header {
+      background: #4CAF50;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    nav {
+      display: flex;
+      justify-content: space-around;
+      background: #eee;
+      padding: 0.5rem;
+    }
+    nav button {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    nav button.active {
+      border-bottom: 2px solid #4CAF50;
+      font-weight: bold;
+    }
+    section {
+      display: none;
+      padding: 1rem;
+    }
+    section.active {
+      display: block;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: #fff;
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      border-radius: 5px;
+      box-shadow: 0 0 3px rgba(0,0,0,0.1);
+    }
+    .note {
+      background: #fffae6;
+      padding: 1rem;
+      border-left: 4px solid #ffc107;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>موقعي الموحد</h1>
+  </header>
+  <nav>
+    <button onclick="showPage('home')" class="active">الرئيسية</button>
+    <button onclick="showPage('page1')">الصفحة الأولى</button>
+    <button onclick="showPage('page2')">الصفحة الثانية</button>
+    <button onclick="showPage('page3')">الصفحة الثالثة</button>
+  </nav>
+  <section id="home" class="active">
+    <h1>الصفحة الرئيسية</h1>
+    <ul>
+      <li>👋 مرحبًا بك في الموقع</li>
+      <li>📖 هنا تجد المحتوى الأساسي</li>
+    </ul>
+  </section>
+        color: #fff;
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .button:hover {
+        background-color: #45a049;
+      }
+      .main-content {
+        padding: 20px;
+      }
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="navbar">
+      <a href="#" onclick="navigateTo('index')">الرئيسية</a>
+      <a href="#" onclick="navigateTo('p1')">الملخصات</a>
+      <a href="#" onclick="navigateTo('p2')">التقييمات</a>
+      <a href="#" onclick="navigateTo('p3')">معلومات</a>
+    </div>
+
+    <div class="main-content">
+      <div id="index" class="page active">
+        <h1>مرحباً بكم في موقعنا!</h1>
+        <p>هذه الصفحة الرئيسية.</p>
+      </div>
+
+      <div id="p1" class="page">
+        <h1>الملخصات</h1>
+        <ul>
+          <li><a href="#">ملخص 1</a></li>
+          <li><a href="#">ملخص 2</a></li>
+          <li><a href="#">ملخص 3</a></li>
+        </ul>
+      </div>
+
+      <div id="p2" class="page">
+        <h1>التقييمات</h1>
+        <p>قريباً سيتم إضافة تقييمات أسبوعية.</p>
+      </div>
+
+      <div id="p3" class="page">
+        <h1>معلومات عنا</h1>
+        <p>نحن طلاب نسعى لتقديم أفضل المحتوى العلمي.</p>
+      </div>
+    </div>
+
+    <script>
+      function navigateTo(pageId) {
+        const pages = document.querySelectorAll('.page');
+        pages.forEach(page => page.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+      }
+    </script>
+  </body>
+</html>
