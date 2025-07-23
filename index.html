@@ -1,31 +1,37 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+  <script defer data-domain="coder01012.github.io" src="https://plausible.io/js/script.file-downloads.hash.outbound-links.pageview-props.revenue.tagged-events.js"></script>
+  <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+  
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-WL9DJQHK9W"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-WL9DJQHK9W');
+  </script>
+  
+  <link rel="icon" type="image/png" href="icon.png">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>تطبيق الويب الأحادي</title>
-  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAABwklEQVRYw+2Wz0rDQBDHf0k9FvUQvIqg5+JLPIZe9Fk8eCq+gI9QfIGCghQKBSn0IBSk0IMgFHoQClLoQShIoQehIIUehIIUehAKUuhBKEihB6EghR6EghR6EApS6EEoSKEHoSBFf0Cv1/suFoufUqn0XiwW3wqFwptpmq+ZTOaFc07TtBeO4zivYRgv6XT6OZPJPBcKhddSqfSx0TQ9S6fTT6lU6pFzTtO0Z8I5p2naI+Gc0zTtkXDOaZr2SDjnNE17JJxzmqY9Es45TdMeCeecpmmPhHNO07RHwjmnaToQcBznzTTNl2Qy+UQ45zRNeyKcc5qmPRHOOe3DcKVSebcs6y2RSDwSzjlN0x4J55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcLFYfLcs6z2RSNwTzjlN054I55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcKlU+rBt+yMej98RzjlN054I55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcLlc/rRt+zMWi90SzjlN054I55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcKVSWTqO8x2NRq8J55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcLVaXbmu+xOJRK4I55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcK1WW9Xr9Z9wOHxJOOc0TXsinHOapj0RzjlN054I55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcL1eXzebzd9QKHRBOOc0TXsinHOapj0RzjlN054I55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcKPRWDcajd9gMHhOOOc0TXsinHOapj0RzjlN054I55ymaU+Ec07TtCfCOadp2hPhnNM07Ylwzmma9kQ45zRNeyKcc5qmPRHOOe3DcLPZXLdaLQj8A7/1Jx6Y8b0gAAAAAElFTkSuQmCC">
+  <meta name="description" content="موقع تحت الإنشاء، جاري تطوير محتوى مخصص للثانوية العامة.">
+  <title>awael_tanya_thanawy</title>
   <style>
-    /* أنماط عامة */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
+    @font-face {
+      font-family: 'Diwani';
+      src: url('https://fonts.googleapis.com/css2?family=Lateef&display=swap');
+      font-display: swap;
     }
     
     :root {
+      font-size: 16px;
       --primary-color: #007bff;
       --active-bg: #cce4ff;
       --inactive-color: #999;
       --whatsapp-color: #25D366;
       --telegram-color: #0088cc;
       --share-color: #0088cc;
-      --page-bg: #f9f9f9;
-      --nav-bg: #ffffff;
-      --nav-shadow: 0 -1px 5px rgba(0, 0, 0, 0.05);
-      --card-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      --border-radius: 2rem;
     }
     
     body {
@@ -34,8 +40,9 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      background: var(--page-bg);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9f9f9;
+      font-family: sans-serif;
+      -webkit-tap-highlight-color: transparent;
       overflow: hidden;
     }
 
@@ -45,31 +52,83 @@
       text-align: center;
       overflow-y: auto;
       margin-bottom: 5.5rem;
-    }
-
-    .page {
       display: none;
-      animation: fadeIn 0.5s ease;
     }
 
-    .page.active {
+    .content.active {
       display: block;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+    
+    nav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 1.5rem 0;
+      background: linear-gradient(to top, #f9f9f9, #ffffff);
+      border-radius: 2rem 2rem 0 0;
+      box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.05);
+      height: 5.5rem;
+      width: 100%;
+      max-width: 100vw;
+      box-sizing: border-box;
+      position: fixed;
+      bottom: 0;
+      z-index: 1000;
     }
 
+    .icon-m1 {
+      width: 3.6rem;
+      height: 3.6rem;
+      color: var(--inactive-color);
+      background: none;
+      border: none;
+      border-radius: 1rem;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      outline: none;
+      transition: transform 0.1s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .icon-m1 svg {
+      width: 100%;
+      height: 100%;
+      stroke-width: 1.5;
+      stroke: currentColor;
+      fill: none;
+    }
+
+    .icon-m1.active {
+      background-color: var(--active-bg);
+      color: var(--primary-color);
+    }
+
+    .icon-m1.active svg {
+      fill: currentColor;
+      stroke: none;
+    }
+
+    .icon-m1:active {
+      transform: scale(0.95);
+    }
+
+    .icon-m1:focus {
+      outline: none;
+    }
+
+    /* Styles for contact page */
     .diwani-text {
-      font-family: 'Lateef', serif;
+      font-family: 'Lateef', 'Diwani', serif;
       font-size: 2rem;
       line-height: 1.6;
       color: #333;
     }
 
     .creator {
-      font-family: 'Lateef', serif;
+      font-family: 'Lateef', 'Diwani', serif;
       font-size: 1.5rem;
       margin: 1rem 0;
       color: #555;
@@ -88,7 +147,7 @@
       align-items: center;
       justify-content: center;
       padding: 0.8rem 1.5rem;
-      border-radius: var(--border-radius);
+      border-radius: 2rem;
       border: none;
       font-weight: bold;
       font-size: 1.1rem;
@@ -96,7 +155,7 @@
       transition: all 0.2s ease;
       text-decoration: none;
       position: relative;
-      box-shadow: var(--card-shadow);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       transform: scale(1);
     }
 
@@ -127,194 +186,29 @@
       margin-left: 0.5rem;
     }
 
-    nav {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      padding: 1.5rem 0;
-      background: var(--nav-bg);
-      border-radius: var(--border-radius) var(--border-radius) 0 0;
-      box-shadow: var(--nav-shadow);
-      height: 5.5rem;
-      width: 100%;
-      max-width: 100vw;
-      box-sizing: border-box;
-      position: fixed;
-      bottom: 0;
-      z-index: 1000;
-    }
-
-    .nav-icon {
-      width: 3.6rem;
-      height: 3.6rem;
-      color: var(--inactive-color);
-      background: none;
-      border: none;
-      border-radius: 1rem;
-      padding: 0.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      outline: none;
-      transition: transform 0.1s ease;
-    }
-
-    .nav-icon svg {
-      width: 100%;
-      height: 100%;
-      stroke-width: 1.5;
-      stroke: currentColor;
-      fill: none;
-    }
-
-    .nav-icon.active {
-      background-color: var(--active-bg);
-      color: var(--primary-color);
-    }
-
-    .nav-icon.active svg {
-      fill: currentColor;
-      stroke: none;
-    }
-
-    .nav-icon:active {
-      transform: scale(0.95);
-    }
-
-    .nav-icon:focus {
-      outline: none;
-    }
-
-    /* الصفحات الأخرى */
-    .card {
-      background: white;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      margin: 1.5rem auto;
-      max-width: 500px;
-      box-shadow: var(--card-shadow);
-      text-align: right;
-    }
-    
-    .card h2 {
-      color: var(--primary-color);
-      margin-bottom: 1rem;
-      font-family: 'Lateef', serif;
-      font-size: 1.8rem;
-    }
-    
-    .card p {
-      line-height: 1.8;
-      color: #555;
-      font-size: 1.1rem;
-    }
-    
-    .home-content {
-      padding: 1rem;
-    }
-    
-    .home-title {
-      font-family: 'Lateef', serif;
-      font-size: 2.5rem;
-      color: var(--primary-color);
-      margin: 1.5rem 0;
-    }
-    
-    .home-description {
-      font-size: 1.2rem;
-      line-height: 1.8;
-      max-width: 600px;
-      margin: 0 auto 2rem;
-      color: #555;
-    }
-    
-    .features {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1.5rem;
-      margin-top: 2rem;
-    }
-    
-    .feature {
-      background: white;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      width: 250px;
-      box-shadow: var(--card-shadow);
-    }
-    
-    .feature-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      color: var(--primary-color);
-    }
-    
-    .feature-title {
-      font-family: 'Lateef', serif;
-      font-size: 1.6rem;
-      margin-bottom: 0.5rem;
-      color: #333;
-    }
-    
-    .feature-desc {
-      color: #666;
-      line-height: 1.6;
-    }
-    
-    .book-list {
-      text-align: right;
-      max-width: 600px;
-      margin: 2rem auto;
-    }
-    
-    .book-item {
-      background: white;
-      padding: 1.2rem;
-      margin: 1rem 0;
-      border-radius: 0.8rem;
-      box-shadow: var(--card-shadow);
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    
-    .book-icon {
-      font-size: 2rem;
-      color: var(--primary-color);
-    }
-    
-    .book-info {
-      flex: 1;
-      text-align: right;
-    }
-    
-    .book-title {
-      font-family: 'Lateef', serif;
-      font-size: 1.5rem;
-      color: #333;
-    }
-    
-    .book-author {
-      color: #666;
-      margin-top: 0.3rem;
-    }
-    
-    /* تصميم متجاوب */
     @media (max-width: 480px) {
+      :root {
+        font-size: 18px;
+      }
+      
+      nav {
+        height: 6rem;
+        padding: 1.2rem 0;
+      }
+      
+      .icon-m1 {
+        width: 3.2rem;
+        height: 3.2rem;
+      }
+    }
+
+    @media (max-width: 360px) {
       :root {
         font-size: 14px;
       }
       
       nav {
         height: 5rem;
-        padding: 1.2rem 0;
-      }
-      
-      .nav-icon {
-        width: 3.2rem;
-        height: 3.2rem;
       }
       
       .diwani-text {
@@ -325,148 +219,32 @@
         font-size: 1.3rem;
       }
     }
-
-    @media (max-width: 360px) {
-      .contact-btn span {
-        font-size: 0.9rem;
-      }
-      
-      .card {
-        padding: 1rem;
-      }
-    }
   </style>
-  <link href="https://fonts.googleapis.com/css2?family=Lateef&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- الصفحة الرئيسية -->
-  <div id="home" class="page active">
-    <div class="home-content">
-      <h1 class="home-title">ملخصات وتقييمات تانية ثانوي</h1>
-      <p class="home-description">
-        تطبيق شامل يحتوي على ملخصات وتقييمات لجميع مواد الصف الثاني الثانوي، مصمم لمساعدة الطلاب على التفوق والتحصيل الدراسي.
-      </p>
-      
-      <div class="features">
-        <div class="feature">
-          <div class="feature-icon">📚</div>
-          <h3 class="feature-title">ملخصات شاملة</h3>
-          <p class="feature-desc">ملخصات مبسطة لجميع المواد الدراسية مع التركيز على النقاط الأساسية</p>
-        </div>
-        
-        <div class="feature">
-          <div class="feature-icon">📝</div>
-          <h3 class="feature-title">تقييمات دورية</h3>
-          <p class="feature-desc">اختبارات وتقييمات لقياس مستوى الطلاب وتحديد نقاط القوة والضعف</p>
-        </div>
-        
-        <div class="feature">
-          <div class="feature-icon">🎯</div>
-          <h3 class="feature-title">تحضير للامتحانات</h3>
-          <p class="feature-desc">نماذج امتحانات سابقة مع حلولها لتحضير الطلاب للامتحانات النهائية</p>
-        </div>
-      </div>
+  <div id="app">
+    <div class="content active" data-page="index">
+      <h1>الصفحة الرئيسية</h1>
+      <p>الموقع لصف الثاني الثانوي 2026/2025 مازال تحت الانشاء😇</p>
     </div>
-  </div>
-  
-  <!-- صفحة الكتاب -->
-  <div id="book" class="page">
-    <div class="content">
-      <h1 class="diwani-text">الملخصات الدراسية</h1>
-      <p class="diwani-text">اختر المادة التي تريد مراجعتها</p>
-      
-      <div class="book-list">
-        <div class="book-item">
-          <div class="book-icon">📘</div>
-          <div class="book-info">
-            <h3 class="book-title">ملخص اللغة العربية</h3>
-            <p class="book-author">تحتوي على أهم القواعد والنصوص الأدبية</p>
-          </div>
-        </div>
-        
-        <div class="book-item">
-          <div class="book-icon">📗</div>
-          <div class="book-info">
-            <h3 class="book-title">ملخص الرياضيات</h3>
-            <p class="book-author">جميع القوانين والمسائل مع الحلول</p>
-          </div>
-        </div>
-        
-        <div class="book-item">
-          <div class="book-icon">📕</div>
-          <div class="book-info">
-            <h3 class="book-title">ملخص الفيزياء</h3>
-            <p class="book-author">القوانين والتجارب العلمية الأساسية</p>
-          </div>
-        </div>
-        
-        <div class="book-item">
-          <div class="book-icon">📙</div>
-          <div class="book-info">
-            <h3 class="book-title">ملخص الكيمياء</h3>
-            <p class="book-author">التفاعلات الكيميائية والجدول الدوري</p>
-          </div>
-        </div>
-        
-        <div class="book-item">
-          <div class="book-icon">📔</div>
-          <div class="book-info">
-            <h3 class="book-title">ملخص الأحياء</h3>
-            <p class="book-author">أجهزة الجسم والعمليات الحيوية</p>
-          </div>
-        </div>
-      </div>
+
+    <div class="content" data-page="p1">
+      <h1>صفحة الملخصات 📖</h1>
+      <p>شغالين على الموقع هيتوفر في الصفحة دي ملخصات تانية ثانوي قريبا...</p>
     </div>
-  </div>
-  
-  <!-- صفحة التقييمات -->
-  <div id="assessments" class="page">
-    <div class="content">
-      <h1 class="diwani-text">التقييمات والاختبارات</h1>
-      <p class="diwani-text">اختبر معلوماتك واستعد للامتحانات</p>
-      
-      <div class="card">
-        <h2>اختبار اللغة العربية</h2>
-        <p>اختبار شامل على النصوص الأدبية والقواعد النحوية</p>
-        <p>عدد الأسئلة: 30 سؤال</p>
-        <p>المدة: 60 دقيقة</p>
-        <button class="contact-btn" style="background-color: var(--primary-color); margin-top: 1rem;">
-          ابدأ الاختبار
-        </button>
-      </div>
-      
-      <div class="card">
-        <h2>اختبار الرياضيات</h2>
-        <p>اختبار على الجبر والهندسة وحساب المثلثات</p>
-        <p>عدد الأسئلة: 25 سؤال</p>
-        <p>المدة: 45 دقيقة</p>
-        <button class="contact-btn" style="background-color: var(--primary-color); margin-top: 1rem;">
-          ابدأ الاختبار
-        </button>
-      </div>
-      
-      <div class="card">
-        <h2>اختبار الفيزياء</h2>
-        <p>اختبار على الميكانيكا والكهرباء والموجات</p>
-        <p>عدد الأسئلة: 20 سؤال</p>
-        <p>المدة: 40 دقيقة</p>
-        <button class="contact-btn" style="background-color: var(--primary-color); margin-top: 1rem;">
-          ابدأ الاختبار
-        </button>
-      </div>
+
+    <div class="content" data-page="p2">
+      <h1>الصفحة 2</h1>
+      <p>هذه هي محتويات الصفحة الثانية</p>
     </div>
-  </div>
-  
-  <!-- صفحة اتصل بنا -->
-  <div id="contact" class="page">
-    <div class="content">
+
+    <div class="content" data-page="p3">
       <h1 class="diwani-text">اتصل بنا</h1>
       <p class="diwani-text">نحن هنا لمساعدتك في أي استفسار لديك</p>
       
       <div class="creator">إنشاء المبرمج: محمد حسن</div>
       
       <div class="contact-buttons">
-        <!-- زر التليجرام -->
         <a href="https://t.me/mohamed4244?text=أنا مهتم بموقعك" class="contact-btn telegram-btn" target="_blank">
           <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 16 16">
             <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.287 5.906q-1.168.486-4.666 2.01-.567.225-.595.442c-.03.243.275.339.69.47l.175.055c.408.133.958.288 1.243.294q.39.01.868-.32 3.269-2.206 3.374-2.23c.05-.012.12-.026.166.016s.042.12.037.141c-.03.129-1.227 1.241-1.846 1.817-.193.18-.33.307-.358.336a8 8 0 0 1-.188.186c-.38.366-.664.64.015 1.088.327.216.589.393.85.571.284.194.568.387.936.629q.14.092.27.187c.331.236.63.448.997.414.214-.02.435-.22.547-.82.265-1.417.786-4.486.906-5.751a1.4 1.4 0 0 0-.013-.315.34.34 0 0 0-.114-.217.53.53 0 0 0-.31-.093c-.3.005-.763.166-2.984 1.09"/>
@@ -474,7 +252,6 @@
           <span>المراسلة على تلجرام</span>
         </a>
         
-        <!-- زر الواتساب -->
         <a href="https://wa.me/201069338288?text=أنا مهتم بموقعك" class="contact-btn whatsapp-btn" target="_blank">
           <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335 .157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -482,7 +259,6 @@
           <span>المراسلة على واتساب</span>
         </a>
         
-        <!-- زر المشاركة الجديد -->
         <button class="contact-btn share-btn" id="shareButton">
           <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
             <path d="M5.5 16.5c1.28 0 2.43-.54 3.25-1.41l4.76 2.78s-.01.09-.01.13c0 2.48 2.02 4.5 4.5 4.5s4.5-2.02 4.5-4.5-2.02-4.5-4.5-4.5c-1.35 0-2.54.61-3.37 1.55l-4.66-2.72c0-.11.03-.22.03-.33s-.02-.22-.03-.33l4.66-2.72c.83.94 2.02 1.55 3.37 1.55 2.48 0 4.5-2.02 4.5-4.5S20.48 1.5 18 1.5 13.5 3.52 13.5 6c0 .04.01.09.01.13L8.75 8.91A4.49 4.49 0 0 0 5.5 7.5C3.02 7.5 1 9.52 1 12s2.02 4.5 4.5 4.5m12.5 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5m0-12c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5m-12.5 6c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5S4 12.83 4 12s.67-1.5 1.5-1.5"/>
@@ -493,32 +269,24 @@
     </div>
   </div>
 
-  <!-- شريط التنقل -->
   <nav>
-    <!-- الصفحة الرئيسية -->
-    <button class="nav-icon active" data-page="home" aria-label="الرئيسية">
+    <button class="icon-m1" aria-label="البيت" type="button" data-page-link="index">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <path d="M3.5 12.5H5v6A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5v-6h1.5a.499.499 0 0 0 .35-.85l-8.5-8.5c-.2-.2-.51-.2-.71 0l-8.49 8.5c-.14.14-.19.36-.11.54s.26.31.46.31"/>
       </svg>
     </button>
-
-    <!-- صفحة الكتاب -->
-    <button class="nav-icon" data-page="book" aria-label="الملخصات">
+    <button class="icon-m1" aria-label="الكتاب" type="button" data-page-link="p2">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <path d="M12 2l.117 .007a1 1 0 0 1 .876 .876l.007 .117v4l.005 .15a2 2 0 0 0 1.838 1.844l.157 .006h4l.117 .007a1 1 0 0 1 .876 .876l.007 .117v9a3 3 0 0 1 -2.824 2.995l-.176 .005h-10a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-14a3 3 0 0 1 2.824 -2.995l.176 -.005zm3 14h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m0 -4h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m-5 -4h-1a1 1 0 1 0 0 2h1a1 1 0 0 0 0 -2"/>
         <path d="M19 7h-4l-.001 -4.001z"/>
       </svg>
     </button>
-    
-    <!-- صفحة التقييمات -->
-    <button class="nav-icon" data-page="assessments" aria-label="التقييمات">
+    <button class="icon-m1" aria-label="الصفحة" type="button" data-page-link="p1">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <path d="M18.5 3h-12A2.5 2.5 0 0 0 4 5.5v13c0 .18.02.35.06.52.21 1.21 1.1 1.74 1.86 1.91l.14.03c.16.03.31.04.44.04h13c.28 0 .5-.22.5-.5s-.22-.5-.5-.5h-13q-.135 0-.27-.03h-.04c-.57-.12-1.03-.57-1.15-1.14-.02-.1-.04-.2-.04-.32 0-.83.67-1.5 1.5-1.5h12c.83 0 1.5-.67 1.5-1.5V4.5c0-.83-.67-1.5-1.5-1.5m-2 5h-8c-.28 0-.5-.22-.5-.5s.22-.5.5-.5h8c.28 0 .5.22.5.5s-.22.5-.5.5"/>
       </svg>
     </button>
-
-    <!-- صفحة اتصل بنا -->
-    <button class="nav-icon" data-page="contact" aria-label="اتصل بنا">
+    <button class="icon-m1" aria-label="التلفون" type="button" data-page-link="p3">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <path d="M13.48 16.16c-.65-.36-2.13-1.25-3.26-2.38s-2.02-2.61-2.38-3.26l2.49-2.31L6.72 2.8 3.01 5.37v.25c-.02.26-.25 6.36 4.38 10.99 4.09 4.09 9.22 4.4 10.65 4.4h.58l2.57-3.72-5.42-3.61-2.3 2.49Z"/>
       </svg>
@@ -527,72 +295,71 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // إدارة التنقل بين الصفحات
-      const navIcons = document.querySelectorAll('.nav-icon');
-      const pages = document.querySelectorAll('.page');
+      const navButtons = document.querySelectorAll('nav .icon-m1');
+      const contentPages = document.querySelectorAll('.content');
       
-      navIcons.forEach(icon => {
-        icon.addEventListener('click', () => {
-          const targetPage = icon.getAttribute('data-page');
-          
-          // إزالة النشط من جميع الأيقونات والصفحات
-          navIcons.forEach(i => i.classList.remove('active'));
-          pages.forEach(page => page.classList.remove('active'));
-          
-          // إضافة النشط للرابط والصفحة الحالية
-          icon.classList.add('active');
-          document.getElementById(targetPage).classList.add('active');
-          
-          // التمرير لأعلى الصفحة
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+      function showPage(pageName) {
+        contentPages.forEach(page => {
+          page.classList.remove('active');
+          if (page.dataset.page === pageName) {
+            page.classList.add('active');
+          }
         });
-      });
+
+        navButtons.forEach(button => {
+          button.classList.remove('active');
+          if (button.dataset.pageLink === pageName) {
+            button.classList.add('active');
+          }
+        });
+      }
+
+      function navigateTo(pageName) {
+        window.history.pushState({ page: pageName }, '', pageName === 'index' ? '/' : pageName);
+        showPage(pageName);
+      }
       
-      // إضافة تأثير الضغط لأزرار التواصل
-      const contactButtons = document.querySelectorAll('.contact-btn');
-      contactButtons.forEach(btn => {
-        btn.addEventListener('mousedown', function() {
-          this.style.transform = 'scale(0.95)';
-          this.style.opacity = '0.9';
+      navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const pageName = button.dataset.pageLink;
+          navigateTo(pageName);
         });
         
-        btn.addEventListener('mouseup', function() {
-          this.style.transform = '';
-          this.style.opacity = '';
-        });
-        
-        btn.addEventListener('mouseleave', function() {
-          this.style.transform = '';
-          this.style.opacity = '';
-        });
+        button.addEventListener('mousedown', e => e.preventDefault());
+        button.addEventListener('mouseup', () => button.blur());
+        button.addEventListener('mouseleave', () => button.blur());
+      });
+
+      window.addEventListener('popstate', (event) => {
+        const page = event.state ? event.state.page : 'index';
+        showPage(page);
       });
       
-      // دالة مشاركة التطبيق
+      const path = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+      showPage(path);
+      
+      // Share functionality
       document.getElementById('shareButton').addEventListener('click', function() {
-        const shareText = "ملخصات وتقييمات تانية ثانوي\nhttps://coder01012.github.io/gfchgf/index.html";
-        
+        const shareData = {
+          title: 'ملخصات وتقييمات',
+          text: 'ملخصات و تقييمات تانية ثانوي',
+          url: 'https://coder01012.github.io/gfchgf/index.html'
+        };
+
         if (navigator.share) {
-          // استخدام واجهة Web Share API إذا متاحة
-          navigator.share({
-            title: 'ملخصات وتقييمات',
-            text: 'ملخصات وتقييمات تانية ثانوي',
-            url: 'https://coder01012.github.io/gfchgf/index.html'
-          }).catch(err => {
-            console.log('Error sharing:', err);
-            fallbackShare(shareText);
+          navigator.share(shareData).catch(err => {
+            console.error('Error sharing:', err);
+            fallbackShare(shareData.text + '\n' + shareData.url);
           });
         } else {
-          // الطريقة التقليدية إذا لم تكن واجهة المشاركة متاحة
-          fallbackShare(shareText);
+          fallbackShare(shareData.text + '\n' + shareData.url);
         }
       });
       
       function fallbackShare(text) {
-        // نسخ النص إلى الحافظة
         navigator.clipboard.writeText(text).then(() => {
           alert('تم نسخ الرابط إلى الحافظة:\n' + text);
         }).catch(err => {
-          // إذا فشل نسخ إلى الحافظة، عرض النص في حوار
           prompt('انسخ الرابط التالي:', text);
         });
       }
