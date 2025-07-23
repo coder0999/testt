@@ -1,93 +1,286 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>موقع موحد</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="موقع تانية ثانوي 2025/2026 - ملخصات وتقييمات">
+  <title>awael_tanya_thanawy</title>
+  <link rel="icon" type="image/png" href="icon.png">
   <style>
-    /* كل التنسيقات من الصفحات الأربعة مدموجة هنا */
+    :root {
+      font-size: 16px;
+      --primary-color: #007bff;
+      --active-bg: #cce4ff;
+      --inactive-color: #999;
+      --whatsapp-color: #25D366;
+      --telegram-color: #0088cc;
+      --share-color: #0088cc;
+    }
+
     body {
-      font-family: sans-serif;
       margin: 0;
       padding: 0;
-    }
-    nav {
-      background-color: white;
-      border-top-left-radius: 10px;
-      border-top-right-radius: 10px;
-      box-shadow: 0 -1px 5px rgba(0,0,0,0.1);
-      position: fixed;
-      bottom: 0;
-      width: 100%;
+      height: 100vh;
       display: flex;
-      justify-content: space-around;
-      border-top: 1px solid #ccc;
+      flex-direction: column;
+      background: #f9f9f9;
+      font-family: sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
     }
-    nav button {
-      background: none;
-      border: none;
-      padding: 10px;
-    }
-    nav svg {
-      width: 24px;
-      height: 24px;
-    }
-    .page {
-      display: none;
+
+    .content {
+      flex: 1;
       padding: 20px;
-      padding-bottom: 80px;
+      text-align: center;
+      overflow-y: auto;
+      margin-bottom: 5.5rem;
     }
-    .active {
+
+    section {
+      display: none;
+    }
+
+    section.active {
       display: block;
     }
-    .active-icon {
-      color: blue;
+
+    .diwani-text {
+      font-family: 'Lateef', 'Diwani', serif;
+      font-size: 2rem;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .creator {
+      font-family: 'Lateef', 'Diwani', serif;
+      font-size: 1.5rem;
+      margin: 1rem 0;
+      color: #555;
+    }
+
+    .contact-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 2rem auto;
+      max-width: 300px;
+    }
+
+    .contact-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.5rem;
+      border-radius: 2rem;
+      border: none;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transform: scale(1);
+    }
+
+    .contact-btn:active {
+      transform: scale(0.95);
+      opacity: 0.9;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .telegram-btn {
+      background-color: var(--telegram-color);
+      color: white;
+    }
+
+    .whatsapp-btn {
+      background-color: var(--whatsapp-color);
+      color: white;
+    }
+
+    .share-btn {
+      background-color: var(--share-color);
+      color: white;
+    }
+
+    .contact-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+      margin-left: 0.5rem;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 1.5rem 0;
+      background: linear-gradient(to top, #f9f9f9, #ffffff);
+      border-radius: 2rem 2rem 0 0;
+      box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.05);
+      height: 5.5rem;
+      width: 100%;
+      max-width: 100vw;
+      box-sizing: border-box;
+      position: fixed;
+      bottom: 0;
+      z-index: 1000;
+    }
+
+    .icon-m1 {
+      width: 3.6rem;
+      height: 3.6rem;
+      color: var(--inactive-color);
+      background: none;
+      border: none;
+      border-radius: 1rem;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      outline: none;
+      transition: transform 0.1s ease;
+      -webkit-tap-highlight-color: transparent;
     }
   </style>
 </head>
-<body>
+  <body>
+    <!-- الصفحة الرئيسية -->
+    <section id="home" class="active content">
+      <h1>الصفحة الرئيسية</h1>
+      <p>الموقع لصف الثاني الثانوي 2026/2025 مازل تحت الإنشاء 😇</p>
+    </section>
 
-<!-- الصفحات الأربعة مدموجة هنا -->
-<div id="page1" class="page active">
-  <!-- محتوى index.html -->
-  <h1>أهلاً بك في الصفحة الرئيسية</h1>
-  <p>هذه الصفحة الأولى.</p>
-</div>
+    <!-- صفحة الملخصات -->
+    <section id="p1" class="content">
+      <h1>صفحة الملخصات 📖</h1>
+      <p>شغالين على الموقع، هيتوفر في الصفحة دي ملخصات تانية ثانوي قريبًا...</p>
+    </section>
 
-<div id="page2" class="page">
-  <!-- محتوى p1.html -->
-  <h1>الملخصات</h1>
-  <p>محتوى الملخصات هنا...</p>
-</div>
+    <!-- صفحة الكتاب -->
+    <section id="p2" class="content">
+      <h1>الصفحة 2</h1>
+      <p>هذه هي محتويات الصفحة الثانية</p>
+    </section>
 
-<div id="page3" class="page">
-  <!-- محتوى p2.html -->
-  <h1>التقييمات</h1>
-  <p>محتوى التقييمات هنا...</p>
-</div>
+    <!-- صفحة اتصل بنا -->
+    <section id="p3" class="content">
+      <h1 class="diwani-text">اتصل بنا</h1>
+      <p class="diwani-text">نحن هنا لمساعدتك في أي استفسار لديك</p>
+      <div class="creator">إنشاء المبرمج: محمد حسن</div>
+      <div class="contact-buttons">
+        <!-- زر التليجرام -->
+        <a href="https://t.me/mohamed4244?text=أنا مهتم بموقعك" class="contact-btn telegram-btn" target="_blank">
+          <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 16 16">
+            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.287 5.906q-1.168.486-4.666 2.01..."/>
+          </svg>
+          <span>المراسلة على تلجرام</span>
+        </a>
 
-<div id="page4" class="page">
-  <!-- محتوى p3.html -->
-  <h1>حول</h1>
-  <p>معلومات حول الموقع...</p>
-</div>
+        <!-- زر الواتساب -->
+        <a href="https://wa.me/201069338288?text=أنا مهتم بموقعك" class="contact-btn whatsapp-btn" target="_blank">
+          <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967..."/>
+          </svg>
+          <span>المراسلة على واتساب</span>
+        </a>
 
-<!-- شريط التنقل -->
-<nav>
-  <button onclick="showPage(1)"><svg fill="black" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></button>
-  <button onclick="showPage(2)"><svg fill="black" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
-  <button onclick="showPage(3)"><svg fill="black" viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h10v2H4v-2zm0 5h8v2H4v-2z"/></svg></button>
-  <button onclick="showPage(4)"><svg fill="black" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4S14.21 4 12 4 8 5.79 8 8s1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></button>
-</nav>
+        <!-- زر المشاركة -->
+        <button class="contact-btn share-btn" id="shareButton">
+          <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+            <path d="M5.5 16.5c1.28 0 2.43-.54 3.25-1.41l4.76 2.78..."/>
+          </svg>
+          <span>مشاركة الموقع مع الأصدقاء</span>
+        </button>
+      </div>
+    </section>
 
-<script>
-  function showPage(pageNum) {
-    const pages = document.querySelectorAll('.page');
-    pages.forEach((p, i) => {
-      p.classList.toggle('active', i === pageNum - 1);
-    });
-  }
-</script>
+    <!-- شريط التنقل -->
+    <nav>
+      <button class="icon-m1 active" aria-label="البيت" onclick="showPage('home')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M3.5 12.5H5v6A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5v-6h1.5..."/>
+        </svg>
+      </button>
+      <button class="icon-m1" aria-label="الكتاب" onclick="showPage('p2')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M12 2l.117 .007a1 1 0 0 1 .876 .876..."/>
+        </svg>
+      </button>
+      <button class="icon-m1" aria-label="الصفحة" onclick="showPage('p1')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M18.5 3h-12A2.5 2.5 0 0 0 4 5.5v13..."/>
+        </svg>
+      </button>
+      <button class="icon-m1" aria-label="التلفون" onclick="showPage('p3')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M13.48 16.16c-.65-.36-2.13-1.25-3.26-2.38..."/>
+        </svg>
+      </button>
+    </nav>
+        <script>
+      // دالة التنقل بين الصفحات داخل SPA
+      function showPage(id) {
+        const sections = document.querySelectorAll('section');
+        sections.forEach(sec => sec.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
 
-</body>
+        const buttons = document.querySelectorAll('.icon-m1');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        const targetBtn = Array.from(buttons).find(btn => btn.getAttribute('onclick').includes(id));
+        if (targetBtn) targetBtn.classList.add('active');
+      }
+
+      // تأثيرات الضغط على الأزرار
+      document.addEventListener('DOMContentLoaded', function() {
+        const buttons = document.querySelectorAll('.icon-m1');
+        buttons.forEach(button => {
+          button.addEventListener('mousedown', e => e.preventDefault());
+          button.addEventListener('mouseup', () => button.blur());
+          button.addEventListener('mouseleave', () => button.blur());
+        });
+
+        const contactButtons = document.querySelectorAll('.contact-btn');
+        contactButtons.forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            if (this.tagName === 'A') return;
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
+            this.style.opacity = '0.9';
+            setTimeout(() => {
+              this.style.transform = '';
+              this.style.opacity = '';
+            }, 150);
+          });
+        });
+
+        // زر المشاركة
+        document.getElementById('shareButton').addEventListener('click', function() {
+          const shareText = "ملخصات و تقييمات تانية ثانوي\nhttps://coder01012.github.io/gfchgf/index.html";
+          if (navigator.share) {
+            navigator.share({
+              title: 'ملخصات وتقييمات',
+              text: 'ملخصات و تقييمات تانية ثانوي',
+              url: 'https://coder01012.github.io/gfchgf/index.html'
+            }).catch(err => {
+              console.log('Error sharing:', err);
+              fallbackShare(shareText);
+            });
+          } else {
+            fallbackShare(shareText);
+          }
+        });
+
+        function fallbackShare(text) {
+          navigator.clipboard.writeText(text).then(() => {
+            alert('تم نسخ الرابط إلى الحافظة:\n' + text);
+          }).catch(err => {
+            prompt('انسخ الرابط التالي:', text);
+          });
+        }
+      });
+    </script>
+  </body>
 </html>
