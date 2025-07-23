@@ -1,147 +1,93 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>موقعي الموحد</title>
+  <meta charset="UTF-8">
+  <title>موقع موحد</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* كل التنسيقات من الصفحات الأربعة مدموجة هنا */
     body {
-      font-family: 'Arial', sans-serif;
+      font-family: sans-serif;
       margin: 0;
       padding: 0;
-      background: #f2f2f2;
-      color: #222;
-    }
-    header {
-      background: #4CAF50;
-      color: white;
-      padding: 1rem;
-      text-align: center;
     }
     nav {
+      background-color: white;
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+      box-shadow: 0 -1px 5px rgba(0,0,0,0.1);
+      position: fixed;
+      bottom: 0;
+      width: 100%;
       display: flex;
       justify-content: space-around;
-      background: #eee;
-      padding: 0.5rem;
+      border-top: 1px solid #ccc;
     }
     nav button {
       background: none;
       border: none;
-      font-size: 1rem;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
+      padding: 10px;
     }
-    nav button.active {
-      border-bottom: 2px solid #4CAF50;
-      font-weight: bold;
+    nav svg {
+      width: 24px;
+      height: 24px;
     }
-    section {
+    .page {
       display: none;
-      padding: 1rem;
+      padding: 20px;
+      padding-bottom: 80px;
     }
-    section.active {
+    .active {
       display: block;
     }
-    h1 {
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      background: #fff;
-      margin: 0.5rem 0;
-      padding: 0.75rem;
-      border-radius: 5px;
-      box-shadow: 0 0 3px rgba(0,0,0,0.1);
-    }
-    .note {
-      background: #fffae6;
-      padding: 1rem;
-      border-left: 4px solid #ffc107;
-      margin: 1rem 0;
+    .active-icon {
+      color: blue;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>موقعي الموحد</h1>
-  </header>
-  <nav>
-    <button onclick="showPage('home')" class="active">الرئيسية</button>
-    <button onclick="showPage('page1')">الصفحة الأولى</button>
-    <button onclick="showPage('page2')">الصفحة الثانية</button>
-    <button onclick="showPage('page3')">الصفحة الثالثة</button>
-  </nav>
-  <section id="home" class="active">
-    <h1>الصفحة الرئيسية</h1>
-    <ul>
-      <li>👋 مرحبًا بك في الموقع</li>
-      <li>📖 هنا تجد المحتوى الأساسي</li>
-    </ul>
-  </section>
-        color: #fff;
-        background-color: #4CAF50;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      .button:hover {
-        background-color: #45a049;
-      }
-      .main-content {
-        padding: 20px;
-      }
-      .page {
-        display: none;
-      }
-      .page.active {
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="navbar">
-      <a href="#" onclick="navigateTo('index')">الرئيسية</a>
-      <a href="#" onclick="navigateTo('p1')">الملخصات</a>
-      <a href="#" onclick="navigateTo('p2')">التقييمات</a>
-      <a href="#" onclick="navigateTo('p3')">معلومات</a>
-    </div>
 
-    <div class="main-content">
-      <div id="index" class="page active">
-        <h1>مرحباً بكم في موقعنا!</h1>
-        <p>هذه الصفحة الرئيسية.</p>
-      </div>
+<!-- الصفحات الأربعة مدموجة هنا -->
+<div id="page1" class="page active">
+  <!-- محتوى index.html -->
+  <h1>أهلاً بك في الصفحة الرئيسية</h1>
+  <p>هذه الصفحة الأولى.</p>
+</div>
 
-      <div id="p1" class="page">
-        <h1>الملخصات</h1>
-        <ul>
-          <li><a href="#">ملخص 1</a></li>
-          <li><a href="#">ملخص 2</a></li>
-          <li><a href="#">ملخص 3</a></li>
-        </ul>
-      </div>
+<div id="page2" class="page">
+  <!-- محتوى p1.html -->
+  <h1>الملخصات</h1>
+  <p>محتوى الملخصات هنا...</p>
+</div>
 
-      <div id="p2" class="page">
-        <h1>التقييمات</h1>
-        <p>قريباً سيتم إضافة تقييمات أسبوعية.</p>
-      </div>
+<div id="page3" class="page">
+  <!-- محتوى p2.html -->
+  <h1>التقييمات</h1>
+  <p>محتوى التقييمات هنا...</p>
+</div>
 
-      <div id="p3" class="page">
-        <h1>معلومات عنا</h1>
-        <p>نحن طلاب نسعى لتقديم أفضل المحتوى العلمي.</p>
-      </div>
-    </div>
+<div id="page4" class="page">
+  <!-- محتوى p3.html -->
+  <h1>حول</h1>
+  <p>معلومات حول الموقع...</p>
+</div>
 
-    <script>
-      function navigateTo(pageId) {
-        const pages = document.querySelectorAll('.page');
-        pages.forEach(page => page.classList.remove('active'));
-        document.getElementById(pageId).classList.add('active');
-      }
-    </script>
-  </body>
+<!-- شريط التنقل -->
+<nav>
+  <button onclick="showPage(1)"><svg fill="black" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></button>
+  <button onclick="showPage(2)"><svg fill="black" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+  <button onclick="showPage(3)"><svg fill="black" viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h10v2H4v-2zm0 5h8v2H4v-2z"/></svg></button>
+  <button onclick="showPage(4)"><svg fill="black" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4S14.21 4 12 4 8 5.79 8 8s1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></button>
+</nav>
+
+<script>
+  function showPage(pageNum) {
+    const pages = document.querySelectorAll('.page');
+    pages.forEach((p, i) => {
+      p.classList.toggle('active', i === pageNum - 1);
+    });
+  }
+</script>
+
+</body>
 </html>
