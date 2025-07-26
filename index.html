@@ -8,12 +8,23 @@
     <link rel="manifest" href="manifest.json">
     <!-- Google Font: Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Preconnect and DNS-prefetch for Google Auth domains to speed up initial connection -->
+    <link rel="preconnect" href="https://accounts.google.com">
+    <link rel="dns-prefetch" href="https://accounts.google.com">
+    <link rel="preconnect" href="https://oauth.googleusercontent.com">
+    <link rel="dns-prefetch" href="https://oauth.googleusercontent.com">
+    <link rel="preconnect" href="https://www.gstatic.com">
+    <link rel="dns-prefetch" href="https://www.gstatic.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+
     <!-- Firebase SDKs -->
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration - Using the provided details
         const firebaseConfig = {
@@ -31,13 +42,22 @@
         window.firebaseDb = getFirestore(window.firebaseApp);
         window.googleAuthProvider = GoogleAuthProvider; // Expose GoogleAuthProvider
 
+        // Global variable to store current user's UID
+        window.currentUserId = null;
+        // Global variable for points, initialized to 0 for logged-in users
+        window.currentPoints = 0;
+
         // Listen for authentication state changes
-        onAuthStateChanged(window.firebaseAuth, (user) => {
+        onAuthStateChanged(window.firebaseAuth, async (user) => {
             window.currentUserId = user ? user.uid : null; // Update global currentUserId
             console.log('Auth state changed:', user ? user.uid : 'No user');
             updateProfileUI(user); // Update the profile UI based on auth state
             if (user) {
-                saveUserProfile(user); // Save/update user profile in Firestore
+                await saveUserProfile(user); // Save/update user profile in Firestore
+                await getPoints(); // Fetch points for the logged-in user
+            } else {
+                window.currentPoints = 0; // Reset points if no user is logged in
+                updatePointsDisplay(); // Update display for logged out state
             }
         });
 
@@ -48,6 +68,10 @@
                 return;
             }
             const provider = new window.googleAuthProvider();
+            // Add this line to force account selection
+            provider.setCustomParameters({
+                prompt: 'select_account' // هذا السطر يفرض اختيار الحساب في كل مرة
+            });
             try {
                 await signInWithPopup(window.firebaseAuth, provider);
                 console.log('Google Sign-in successful.');
@@ -68,6 +92,8 @@
             try {
                 await signOut(window.firebaseAuth);
                 console.log('User signed out.');
+                window.currentPoints = 0; // Reset points on sign out
+                updatePointsDisplay(); // Update display for logged out state
             } catch (error) {
                 console.error('Error during sign out:', error);
             }
@@ -129,6 +155,61 @@
                 console.log('User profile saved/updated in Firestore:', userId);
             } catch (e) {
                 console.error('Error saving user profile to Firestore:', e);
+            }
+        };
+
+        // Function to get user points from Firestore
+        window.getPoints = async () => {
+            if (!window.firebaseDb || !window.currentUserId) {
+                console.log('getPoints: Firebase DB or currentUserId not available. Setting points to 0.');
+                window.currentPoints = 0; // Default to 0 if not logged in
+                updatePointsDisplay();
+                return;
+            }
+            const userId = window.currentUserId;
+            const appId = firebaseConfig.projectId;
+            const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
+            console.log(`getPoints: Attempting to fetch points for user: ${userId} at path: artifacts/${appId}/users/${userId}/points/data`);
+
+            try {
+                const docSnap = await getDoc(pointsDocRef);
+                if (docSnap.exists()) {
+                    window.currentPoints = docSnap.data().value || 0;
+                    console.log('getPoints: User points fetched from Firestore:', window.currentPoints);
+                } else {
+                    // If no points document exists, initialize it to 0
+                    console.log('getPoints: No points document found. Initializing to 0.');
+                    await setDoc(pointsDocRef, { value: 0 });
+                    window.currentPoints = 0;
+                    console.log('getPoints: Points document created and initialized to 0 for user:', userId);
+                }
+            } catch (e) {
+                console.error('getPoints: Error fetching or initializing user points from Firestore:', e);
+                window.currentPoints = 0; // Fallback to 0 on error
+            } finally {
+                updatePointsDisplay(); // Always update display after attempt
+            }
+        };
+
+        // Function to update user points in Firestore
+        window.updatePoints = async (newPoints) => {
+            console.log(`updatePoints: Attempting to update points to ${newPoints}. Current User ID: ${window.currentUserId}`);
+            if (!window.firebaseDb || !window.currentUserId) {
+                console.warn('updatePoints: Cannot update points: User not logged in or Firebase DB not initialized.');
+                return;
+            }
+            const userId = window.currentUserId;
+            const appId = firebaseConfig.projectId;
+            const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
+            console.log(`updatePoints: Updating points for user: ${userId} at path: artifacts/${appId}/users/${userId}/points/data`);
+
+            try {
+                await setDoc(pointsDocRef, { value: newPoints }, { merge: true });
+                window.currentPoints = newPoints;
+                updatePointsDisplay();
+                console.log(`updatePoints: Points updated successfully to ${newPoints} for user: ${userId}`);
+            } catch (e) {
+                console.error('updatePoints: Error updating user points in Firestore:', e);
             }
         };
     </script>
@@ -634,6 +715,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            /* Add overflow-x hidden to prevent horizontal scrollbar from appearing on content */
+            overflow-x: hidden;
+            position: relative; /* Needed for absolute positioning of content for transitions */
         }
 
         /* Keyframes for spin animation */
@@ -664,7 +748,7 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
-            <div class="points-display" id="points-display" onclick="showTab('store')">8 نقاط</div>
+            <div class="points-display" id="points-display" onclick="showTab('store')"></div>
         </div>
 
         <div class="more-menu-container" style="display: block;">
@@ -792,7 +876,7 @@
             </div>
 
             <!-- Subject Content Area -->
-            <div class="subject-content-area">
+            <div class="subject-content-area" id="subject-content-area">
                 <div id="arabic-content" class="subject-content active">
                     <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة اللغة العربية تشمل النحو، الصرف، البلاغة، والأدب. يتم التركيز على قواعد الإعراب، تصريف الأفعال، فنون البلاغة مثل التشبيه والاستعارة، وتحليل النصوص الأدبية.</p>
                 </div>
@@ -876,24 +960,32 @@
     </nav>
 
     <script>
-        // Global variable for points (placeholder for future backend integration)
-        let currentPoints = 8; // Initial points
         let deferredPrompt; // To store the beforeinstallprompt event
 
         // Function to update the displayed points
-        function updatePointsDisplay() {
+        async function updatePointsDisplay() {
             const pointsDisplayElement = document.getElementById('points-display');
             if (pointsDisplayElement) {
-                pointsDisplayElement.textContent = `${currentPoints} نقاط`;
+                if (window.currentUserId) {
+                    pointsDisplayElement.textContent = `${window.currentPoints} نقاط`;
+                } else {
+                    pointsDisplayElement.textContent = `يجب تسجيل الدخول لتفعيل عداد النقاط`;
+                }
             }
         }
 
-        // Placeholder function to simulate adding points
-        function addPoints(amount) {
-            currentPoints += amount;
-            updatePointsDisplay();
-            // In a real application, this would involve API calls to a backend
-            console.log(`Added ${amount} points. Total points: ${currentPoints}`);
+        // Function to simulate adding points and update in Firestore
+        async function addPoints(amount) {
+            console.log(`addPoints: Called with amount: ${amount}`);
+            if (!window.currentUserId) {
+                console.warn('addPoints: Cannot add points: User not logged in.');
+                // Optionally, show a message to the user
+                return;
+            }
+            const newTotalPoints = window.currentPoints + amount;
+            console.log(`addPoints: Current points: ${window.currentPoints}, New total points: ${newTotalPoints}`);
+            await window.updatePoints(newTotalPoints);
+            console.log(`addPoints: Points addition process completed.`);
         }
 
         // Function to show main tabs
@@ -1075,10 +1167,13 @@
             showTab('home');
         });
 
-        // Initial setup on DOMContentLoaded
+        // Swipe functionality for subject content area
+        let startX = 0;
+        let endX = 0;
+        const swipeThreshold = 50; // Minimum pixels to count as a swipe
+
         document.addEventListener('DOMContentLoaded', () => {
             showTab('home'); // Show home tab by default
-            updatePointsDisplay(); // Initialize points display
 
             const darkModeToggle = document.getElementById('dark-mode-toggle');
             const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
@@ -1099,6 +1194,44 @@
                         document.body.classList.remove('dark-mode');
                         localStorage.setItem('darkMode', 'disabled');
                     }
+                });
+            }
+
+            const subjectContentArea = document.getElementById('subject-content-area');
+            if (subjectContentArea) {
+                subjectContentArea.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                });
+
+                subjectContentArea.addEventListener('touchmove', (e) => {
+                    endX = e.touches[0].clientX;
+                });
+
+                subjectContentArea.addEventListener('touchend', () => {
+                    const diffX = startX - endX;
+
+                    // Get all subject content IDs
+                    const subjectContents = Array.from(document.querySelectorAll('.subject-content'));
+                    const subjectIds = subjectContents.map(content => content.id.replace('-content', ''));
+
+                    // Get the currently active subject ID
+                    const activeSubjectContent = document.querySelector('.subject-content.active');
+                    if (!activeSubjectContent) return;
+                    const currentSubjectId = activeSubjectContent.id.replace('-content', '');
+                    const currentIndex = subjectIds.indexOf(currentSubjectId);
+
+                    if (Math.abs(diffX) > swipeThreshold) {
+                        if (diffX > 0) { // Swiped left (move to next subject in RTL)
+                            const nextIndex = (currentIndex + 1) % subjectIds.length;
+                            showSubjectContent(subjectIds[nextIndex]);
+                        } else { // Swiped right (move to previous subject in RTL)
+                            const prevIndex = (currentIndex - 1 + subjectIds.length) % subjectIds.length;
+                            showSubjectContent(subjectIds[prevIndex]);
+                        }
+                    }
+                    // Reset touch coordinates
+                    startX = 0;
+                    endX = 0;
                 });
             }
         });
