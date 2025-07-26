@@ -16,9 +16,15 @@
             --border-color: #e9ecef;
             --card-shadow: rgba(0, 0, 0, 0.08);
             --dropdown-bg: #ffffff;
-            --dropdown-item-hover: #f1f3f5; /* هذا اللون لم يعد يستخدم لتأثير الضغط، بل اللون النشط */
+            --dropdown-item-hover: #f1f3f5;
 
-            /* New variables for subject tabs (colors are now defined per-tab class) */
+            /* New variables for unified blue subject tabs */
+            --subject-tab-bg-inactive: #e0f2ff; /* Very light blue */
+            --subject-tab-text-inactive: #0056b3; /* Darker blue for text on inactive tab */
+            --subject-tab-bg-active: var(--primary-color); /* Primary blue for active tab */
+            --subject-tab-text-active: #ffffff; /* White for text on active tab */
+            --subject-tab-icon-inactive: #0056b3; /* Darker blue for icon on inactive tab */
+            --subject-tab-icon-active: #ffffff; /* White for icon on active tab */
         }
 
         body.dark-mode {
@@ -33,6 +39,14 @@
             --card-shadow: rgba(0, 0, 0, 0.3);
             --dropdown-bg: #1e1e1e;
             --dropdown-item-hover: #2d2d2d;
+
+            /* Dark mode for unified blue subject tabs */
+            --subject-tab-bg-inactive: #1a365d; /* Darker blue for dark mode inactive */
+            --subject-tab-text-inactive: #90caf9; /* Lighter blue for dark mode inactive text */
+            --subject-tab-bg-active: var(--primary-color); /* Primary blue for dark mode active */
+            --subject-tab-text-active: #ffffff; /* White for dark mode active text */
+            --subject-tab-icon-inactive: #90caf9; /* Lighter blue for dark mode inactive icon */
+            --subject-tab-icon-active: #ffffff; /* White for dark mode active icon */
         }
 
         body {
@@ -394,15 +408,19 @@
             padding-bottom: 8px; /* Space for scrollbar if it appears */
             margin-bottom: 1rem;
             gap: 8px; /* Space between tabs */
-            justify-content: center; /* Center tabs if they don't fill width */
+            justify-content: flex-start; /* Align tabs to start, allowing scroll */
+            padding-right: 1.25rem; /* Padding at the right end for scroll visibility */
+            padding-left: 1.25rem; /* Padding at the left end for scroll visibility */
+            margin-right: -1.25rem; /* Compensate for padding to extend to edge */
+            margin-left: -1.25rem; /* Compensate for padding to extend to edge */
         }
 
         .subject-tab {
             position: relative;
-            flex: 1; /* Make tabs take equal width */
-            min-width: 120px; /* Minimum width for small screens */
-            max-width: 150px; /* Max width to prevent overly wide tabs on large screens */
-            padding: 12px 16px;
+            flex-shrink: 0; /* Prevent shrinking */
+            width: 140px; /* Fixed width for consistent size on mobile */
+            height: 60px; /* Fixed height for consistent size */
+            padding: 0; /* Padding handled by internal elements */
             border-radius: 9999px; /* Full rounded corners */
             font-size: 1rem;
             font-weight: 500;
@@ -411,7 +429,8 @@
             user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
-            /* background-color and color will be set by specific subject classes */
+            background-color: var(--subject-tab-bg-inactive);
+            color: var(--subject-tab-text-inactive);
             transition: background-color 0.3s ease, color 0.3s ease, transform 0.1s ease;
             overflow: hidden; /* Hide overflow for SVG background */
             display: flex;
@@ -426,45 +445,14 @@
 
         /* Active state for all tabs - text and icon color */
         .subject-tab.active {
-            color: #ffffff; /* Text color is white when active */
+            background-color: var(--subject-tab-bg-active);
+            color: var(--subject-tab-text-active);
         }
         .subject-tab.active .subject-icon-bg svg {
-            fill: #ffffff; /* Icon color is white when active */
+            fill: var(--subject-tab-icon-active); /* Icon color is white when active */
         }
-
-
-        /* Specific colors for each subject tab */
-        .subject-tab.arabic-tab {
-            background-color: #28a745; /* Green */
-            color: #ffffff; /* Default text color for this tab */
-        }
-        body.dark-mode .subject-tab.arabic-tab {
-            background-color: #4CAF50; /* Lighter green for dark mode */
-        }
-
-        .subject-tab.english-tab {
-            background-color: #007bff; /* Blue */
-            color: #ffffff; /* Default text color for this tab */
-        }
-        body.dark-mode .subject-tab.english-tab {
-            background-color: #4da6ff; /* Lighter blue for dark mode */
-        }
-
-        .subject-tab.physics-tab {
-            background-color: #ffc107; /* Yellow/Orange */
-            color: #212529; /* Dark text for light background */
-        }
-        body.dark-mode .subject-tab.physics-tab {
-            background-color: #FFEB3B; /* Brighter yellow for dark mode */
-            color: #212529; /* Keep dark text */
-        }
-
-        .subject-tab.chemistry-tab {
-            background-color: #6f42c1; /* Purple */
-            color: #ffffff; /* Default text color for this tab */
-        }
-        body.dark-mode .subject-tab.chemistry-tab {
-            background-color: #9C27B0; /* Brighter purple for dark mode */
+        .subject-tab .subject-icon-bg svg {
+            fill: var(--subject-tab-icon-inactive); /* Icon color inherits from inactive text */
         }
 
 
@@ -485,13 +473,14 @@
         .subject-tab .subject-icon-bg svg {
             width: 60px; /* Larger SVG for background */
             height: 60px;
-            fill: currentColor; /* Inherit color from text */
+            /* fill: currentColor; Removed, now uses specific var */
             stroke: none;
         }
 
         .subject-tab span {
             position: relative; /* Ensure text is above SVG */
             z-index: 1;
+            padding: 0 16px; /* Add padding to text itself */
         }
 
         /* Remove border from subject content area */
@@ -592,7 +581,7 @@
             <h1>ملخصات المواد</h1>
             <!-- Horizontal Subject Tabs -->
             <div class="subject-tabs-container scrollbar-hide">
-                <button class="subject-tab arabic-tab active" onclick="showSubjectContent('arabic')">
+                <button class="subject-tab" onclick="showSubjectContent('arabic')">
                     <div class="subject-icon-bg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19 18H5V8h14v10zm-1-9H6v8h12V9zm-1-6H6c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 10h6v2H9v-2zm0 3h6v2H9v-2z" />
@@ -600,7 +589,7 @@
                     </div>
                     <span>اللغة العربية</span>
                 </button>
-                <button class="subject-tab english-tab" onclick="showSubjectContent('english')">
+                <button class="subject-tab" onclick="showSubjectContent('english')">
                     <div class="subject-icon-bg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86zm2 0V4.07c3.95.49 7 3.85 7 7.93s-3.05 7.44-7 7.93z" />
@@ -608,7 +597,7 @@
                     </div>
                     <span>اللغة الإنجليزية</span>
                 </button>
-                <button class="subject-tab physics-tab" onclick="showSubjectContent('physics')">
+                <button class="subject-tab" onclick="showSubjectContent('physics')">
                     <div class="subject-icon-bg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/>
@@ -616,7 +605,7 @@
                     </div>
                     <span>فيزيا</span>
                 </button>
-                <button class="subject-tab chemistry-tab" onclick="showSubjectContent('chemistry')">
+                <button class="subject-tab" onclick="showSubjectContent('chemistry')">
                     <div class="subject-icon-bg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-6c-1.1 0-2 .9-2 2v5c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V9c0-1.1-.9-2-2-2zm-2 4h-3V9h3v2zM1 1v22h22V1H1zm20 20H3V3h18v18z" />
