@@ -23,51 +23,60 @@
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        // MODIFICATION: Added onSnapshot to imports for real-time updates
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration - Using the provided details
-        const firebaseConfig = {
-            apiKey: "AIzaSyC3BSf75v3qFs2xm7i-TJksrcEHELEmVpo",
-            authDomain: "potato-e7861.firebaseapp.com",
-            projectId: "potato-e7861",
-            storageBucket: "potato-e7861.firebasestorage.app",
-            messagingSenderId: "905443935896",
-            appId: "1:905443935896:web:93c9de4305e49bb6ff32ed"
-        };
+        // Use global variables provided by the Canvas environment for Firebase configuration
+        // If __firebase_config is not defined (e.g., outside Canvas), fall back to an empty object.
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // Use __app_id for consistent Firestore paths. If not defined, use a default ID.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // Initialize Firebase
         window.firebaseApp = initializeApp(firebaseConfig);
         window.firebaseAuth = getAuth(window.firebaseApp);
         window.firebaseDb = getFirestore(window.firebaseApp);
-        window.googleAuthProvider = GoogleAuthProvider; // Expose GoogleAuthProvider
+        window.googleAuthProvider = GoogleAuthProvider; // Expose GoogleAuthProvider for sign-in
 
-        // Global variable to store current user's UID
+        // Global variables to store current user's UID and points
         window.currentUserId = null;
-        // Global variable for points, initialized to 0
         window.currentPoints = 0;
-        // MODIFICATION: Global variable to hold the points listener unsubscribe function
-        window.pointsListener = null;
+        let isAuthReady = false; // Flag to ensure Firestore operations wait for auth state to be known
 
-        // MODIFICATION: Rewrote onAuthStateChanged to use a real-time listener for points
+        // Function to handle initial authentication (custom token or anonymous)
+        async function authenticateUser() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    // Sign in with provided custom token if available
+                    await signInWithCustomToken(window.firebaseAuth, __initial_auth_token);
+                    console.log('Signed in with custom token.');
+                } else {
+                    // Sign in anonymously if no custom token is provided
+                    await signInAnonymously(window.firebaseAuth);
+                    console.log('Signed in anonymously.');
+                }
+            } catch (error) {
+                console.error('Firebase authentication error:', error);
+            }
+        }
+
+        // Listen for authentication state changes
         onAuthStateChanged(window.firebaseAuth, async (user) => {
             window.currentUserId = user ? user.uid : null; // Update global currentUserId
+            isAuthReady = true; // Authentication state is now determined
             console.log('Auth state changed:', user ? user.uid : 'No user');
-            updateProfileUI(user); // Update the profile UI based on auth state
+            updateProfileUI(user); // Update the profile UI based on current auth state
             if (user) {
                 await saveUserProfile(user); // Save/update user profile in Firestore
-                setupPointsListener(); // Set up the real-time points listener
+                await getPoints(); // Fetch points for the logged-in user
             } else {
-                // If user logs out, unsubscribe from listener and reset points
-                if (window.pointsListener) {
-                    window.pointsListener(); // This is the unsubscribe function returned by onSnapshot
-                    window.pointsListener = null;
-                }
-                window.currentPoints = 0; // Reset points
+                window.currentPoints = 0; // Reset points if no user is logged in
                 updatePointsDisplay(); // Update display for logged out state
             }
         });
+
+        // Call authentication on page load to establish initial state
+        authenticateUser();
 
         // Function to handle Google Sign-in
         window.signInWithGoogle = async () => {
@@ -76,6 +85,7 @@
                 return;
             }
             const provider = new window.googleAuthProvider();
+            // Force account selection for better user experience
             provider.setCustomParameters({
                 prompt: 'select_account'
             });
@@ -99,13 +109,14 @@
             try {
                 await signOut(window.firebaseAuth);
                 console.log('User signed out.');
-                // No need to reset points here, the onAuthStateChanged listener will handle it
+                window.currentPoints = 0; // Reset points on sign out
+                updatePointsDisplay(); // Update display for logged out state
             } catch (error) {
                 console.error('Error during sign out:', error);
             }
         };
-        
-        // Function to update the profile UI
+
+        // Function to update the profile UI based on user authentication state
         window.updateProfileUI = (user) => {
             const profileContentDiv = document.getElementById('profile-content-area');
             if (!profileContentDiv) return;
@@ -144,7 +155,7 @@
         window.saveUserProfile = async (user) => {
             if (!window.firebaseDb || !user) return;
             const userId = user.uid;
-            const appId = firebaseConfig.projectId;
+            // Construct the document reference using the global appId
             const userDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/profile`, 'data');
 
             const profileData = {
@@ -163,55 +174,83 @@
             }
         };
 
-        // MODIFICATION: Replaced getPoints with a function to set up a real-time listener
-        window.setupPointsListener = () => {
-            if (window.pointsListener) {
-                window.pointsListener(); // Unsubscribe from old listener
-            }
-
-            if (!window.firebaseDb || !window.currentUserId) {
-                window.currentPoints = 0;
+        // Function to get user points from Firestore
+        window.getPoints = async () => {
+            // Ensure Firebase is ready and user is logged in before attempting to fetch points
+            if (!window.firebaseDb || !window.currentUserId || !isAuthReady) {
+                console.warn('Cannot fetch points: Firebase not ready or user not logged in.');
+                window.currentPoints = 0; // Default to 0 if not logged in
                 updatePointsDisplay();
                 return;
             }
-
             const userId = window.currentUserId;
-            const appId = firebaseConfig.projectId;
+            // Construct the document reference using the global appId
             const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
 
-            window.pointsListener = onSnapshot(pointsDocRef, (docSnap) => {
+            try {
+                const docSnap = await getDoc(pointsDocRef);
                 if (docSnap.exists()) {
                     window.currentPoints = docSnap.data().value || 0;
-                    console.log('Points updated from listener:', window.currentPoints);
+                    console.log('User points fetched from Firestore:', window.currentPoints);
                 } else {
-                    setDoc(pointsDocRef, { value: 0 }); // Initialize if doesn't exist
+                    // If no points document exists, initialize it to 0
+                    await setDoc(pointsDocRef, { value: 0 });
                     window.currentPoints = 0;
                     console.log('Points document created and initialized to 0 for user:', userId);
                 }
-                updatePointsDisplay();
-            }, (error) => {
-                console.error('Error in points listener:', error);
-                window.currentPoints = 0;
-                updatePointsDisplay();
-            });
+            } catch (e) {
+                console.error('Error fetching or initializing user points from Firestore:', e);
+                window.currentPoints = 0; // Fallback to 0 on error
+            } finally {
+                updatePointsDisplay(); // Always update display after attempt
+            }
         };
 
-        // MODIFICATION: Simplified updatePoints to only write to Firestore.
-        // The listener will now handle updating the UI and local state.
+        // Function to update user points in Firestore
         window.updatePoints = async (newPoints) => {
-            if (!window.firebaseDb || !window.currentUserId) {
-                console.warn('Cannot update points: User not logged in.');
+            // Ensure Firebase is ready and user is logged in before attempting to update points
+            if (!window.firebaseDb || !window.currentUserId || !isAuthReady) {
+                console.warn('Cannot update points: Firebase not ready or user not logged in.');
+                const pointsDisplayElement = document.getElementById('points-display');
+                if (pointsDisplayElement) {
+                    pointsDisplayElement.textContent = 'الرجاء تسجيل الدخول!'; // Message to user
+                    pointsDisplayElement.style.backgroundColor = '#dc3545'; // Red background for error
+                    setTimeout(() => {
+                        updatePointsDisplay(); // Revert display after a short delay
+                        pointsDisplayElement.style.backgroundColor = 'var(--active-bg)'; // Revert background
+                    }, 2000);
+                }
                 return;
             }
             const userId = window.currentUserId;
-            const appId = firebaseConfig.projectId;
+            // Construct the document reference using the global appId
             const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
 
             try {
                 await setDoc(pointsDocRef, { value: newPoints }, { merge: true });
-                console.log(`Points update request sent to Firestore with value: ${newPoints}`);
+                window.currentPoints = newPoints;
+                updatePointsDisplay(); // Update the displayed points immediately
+                console.log(`Points updated to ${newPoints} for user: ${userId}`);
+                // Add a subtle visual feedback for successful update
+                const pointsDisplayElement = document.getElementById('points-display');
+                if (pointsDisplayElement) {
+                    pointsDisplayElement.style.transform = 'scale(1.1)'; // Slight scale animation
+                    pointsDisplayElement.style.transition = 'transform 0.2s ease-out';
+                    setTimeout(() => {
+                        pointsDisplayElement.style.transform = 'scale(1)'; // Revert scale
+                    }, 300);
+                }
             } catch (e) {
                 console.error('Error updating user points in Firestore:', e);
+                const pointsDisplayElement = document.getElementById('points-display');
+                if (pointsDisplayElement) {
+                    pointsDisplayElement.textContent = 'خطأ في التحديث!'; // Message to user
+                    pointsDisplayElement.style.backgroundColor = '#dc3545'; // Red background for error
+                    setTimeout(() => {
+                        updatePointsDisplay(); // Revert display after a short delay
+                        pointsDisplayElement.style.backgroundColor = 'var(--active-bg)'; // Revert background
+                    }, 2000);
+                }
             }
         };
     </script>
@@ -965,8 +1004,7 @@
         let deferredPrompt; // To store the beforeinstallprompt event
 
         // Function to update the displayed points
-        // This function is now called by the onSnapshot listener
-        function updatePointsDisplay() {
+        async function updatePointsDisplay() {
             const pointsDisplayElement = document.getElementById('points-display');
             if (pointsDisplayElement) {
                 if (window.currentUserId) {
@@ -977,17 +1015,24 @@
             }
         }
 
-        // Function to add points. It now relies on the listener to update the UI.
+        // Function to simulate adding points and update in Firestore
         async function addPoints(amount) {
             if (!window.currentUserId) {
                 console.warn('Cannot add points: User not logged in.');
-                // You could add a visual notification here instead of an alert
+                const pointsDisplayElement = document.getElementById('points-display');
+                if (pointsDisplayElement) {
+                    pointsDisplayElement.textContent = 'الرجاء تسجيل الدخول لإضافة نقاط!';
+                    pointsDisplayElement.style.backgroundColor = '#dc3545'; // Red background for error
+                    setTimeout(() => {
+                        updatePointsDisplay(); // Revert after a short delay
+                        pointsDisplayElement.style.backgroundColor = 'var(--active-bg)';
+                    }, 3000); // Give user more time to read the message
+                }
                 return;
             }
-            // The listener ensures window.currentPoints is always up-to-date
             const newTotalPoints = window.currentPoints + amount;
             await window.updatePoints(newTotalPoints);
-            console.log(`Requested to add ${amount} points. New total will be ${newTotalPoints}.`);
+            console.log(`Added ${amount} points. Total points: ${newTotalPoints}`);
         }
 
         // Function to show main tabs
@@ -1016,10 +1061,12 @@
             if (isChildPage) {
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
+                // Only hide points display if it's a child page AND not the store page itself
+                // If it's the store page, we want the points to remain visible and clickable
                 if (id !== 'store') {
                    pointsDisplay.style.display = 'none';
                 } else {
-                   pointsDisplay.style.display = 'flex';
+                   pointsDisplay.style.display = 'flex'; // Ensure it's visible on store page
                 }
                 moreMenuContainer.style.display = 'none';
             } else {
@@ -1029,9 +1076,11 @@
                 moreMenuContainer.style.display = 'block';
             }
 
+            // If navigating to summaries, ensure the first subject tab is active
             if (id === 'summaries') {
-                showSubjectContent('arabic');
+                showSubjectContent('arabic'); // Set 'اللغة العربية' as default active subject tab
             } else if (id === 'profile') {
+                // When navigating to profile, ensure UI is updated based on current auth state
                 if (window.firebaseAuth && window.firebaseAuth.currentUser) {
                     updateProfileUI(window.firebaseAuth.currentUser);
                 } else {
@@ -1048,19 +1097,23 @@
 
         // Function to show content for a specific subject tab
         function showSubjectContent(subjectId) {
+            // Deactivate all subject tabs
             document.querySelectorAll('.subject-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
 
+            // Activate the clicked subject tab
             const activeTab = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
             if (activeTab) {
                 activeTab.classList.add('active');
             }
 
+            // Hide all subject content divs
             document.querySelectorAll('.subject-content').forEach(contentDiv => {
                 contentDiv.style.display = 'none';
             });
 
+            // Show the content div for the active subject
             const contentToShow = document.getElementById(`${subjectId}-content`);
             if (contentToShow) {
                 contentToShow.style.display = 'block';
@@ -1069,11 +1122,14 @@
 
         // PWA Installation Logic
         window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
             e.preventDefault();
+            // Stash the event so it can be triggered later.
             deferredPrompt = e;
+            // Update UI to notify the user they can add to home screen
             const installAppItem = document.getElementById('install-app-item');
             if (installAppItem) {
-                installAppItem.style.display = 'flex';
+                installAppItem.style.display = 'flex'; // Show the install option
             }
             console.log('beforeinstallprompt event fired.');
         });
@@ -1081,30 +1137,32 @@
         async function installApp() {
             const installEmojiSpan = document.getElementById('install-emoji');
             if (installEmojiSpan) {
-                installEmojiSpan.textContent = '�';
-                installEmojiSpan.classList.add('animate-spin-infinite');
+                installEmojiSpan.textContent = '🔄'; // Spinner emoji
+                installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
 
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
                     const { outcome } = await deferredPrompt.userChoice;
                     if (outcome === 'accepted') {
                         console.log('User accepted the A2HS prompt');
-                        installEmojiSpan.textContent = '✅';
-                        installEmojiSpan.classList.remove('animate-spin-infinite');
+                        installEmojiSpan.textContent = '✅'; // Checkmark
+                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
                         const installAppItem = document.getElementById('install-app-item');
                         if (installAppItem) {
-                            installAppItem.style.display = 'none';
+                            installAppItem.style.display = 'none'; // Hide the button
                         }
                     } else {
                         console.log('User dismissed the A2HS prompt');
-                        installEmojiSpan.textContent = '📥';
-                        installEmojiSpan.classList.remove('animate-spin-infinite');
+                        installEmojiSpan.textContent = '📥'; // Revert to download emoji
+                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
                     }
-                    deferredPrompt = null;
+                    deferredPrompt = null; // Clear the deferredPrompt
                 } else {
+                    // PWA not available or already installed/dismissed
                     console.log('PWA installation prompt not available or already shown.');
-                    installEmojiSpan.textContent = '❌';
-                    installEmojiSpan.classList.remove('animate-spin-infinite');
+                    installEmojiSpan.textContent = '❌'; // Indicate failure or not available
+                    installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
+                    // If it's not available, it should probably be hidden
                     const installAppItem = document.getElementById('install-app-item');
                     if (installAppItem) {
                         installAppItem.style.display = 'none';
@@ -1114,7 +1172,9 @@
         }
 
         window.addEventListener('appinstalled', () => {
+            // App was installed
             console.log('PWA was installed');
+            // Hide the install button if the app is already installed
             const installAppItem = document.getElementById('install-app-item');
             if (installAppItem) {
                 installAppItem.style.display = 'none';
@@ -1122,7 +1182,7 @@
         });
 
 
-        // Register Service Worker
+        // Register Service Worker (for PWA functionality)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
@@ -1157,10 +1217,10 @@
         // Swipe functionality for subject content area
         let startX = 0;
         let endX = 0;
-        const swipeThreshold = 50;
+        const swipeThreshold = 50; // Minimum pixels to count as a swipe
 
         document.addEventListener('DOMContentLoaded', () => {
-            showTab('home');
+            showTab('home'); // Show home tab by default
 
             const darkModeToggle = document.getElementById('dark-mode-toggle');
             const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
@@ -1196,22 +1256,27 @@
 
                 subjectContentArea.addEventListener('touchend', () => {
                     const diffX = startX - endX;
+
+                    // Get all subject content IDs
                     const subjectContents = Array.from(document.querySelectorAll('.subject-content'));
                     const subjectIds = subjectContents.map(content => content.id.replace('-content', ''));
+
+                    // Get the currently active subject ID
                     const activeSubjectContent = document.querySelector('.subject-content.active');
                     if (!activeSubjectContent) return;
                     const currentSubjectId = activeSubjectContent.id.replace('-content', '');
                     const currentIndex = subjectIds.indexOf(currentSubjectId);
 
                     if (Math.abs(diffX) > swipeThreshold) {
-                        if (diffX > 0) {
+                        if (diffX > 0) { // Swiped left (move to next subject in RTL)
                             const nextIndex = (currentIndex + 1) % subjectIds.length;
                             showSubjectContent(subjectIds[nextIndex]);
-                        } else {
+                        } else { // Swiped right (move to previous subject in RTL)
                             const prevIndex = (currentIndex - 1 + subjectIds.length) % subjectIds.length;
                             showSubjectContent(subjectIds[prevIndex]);
                         }
                     }
+                    // Reset touch coordinates
                     startX = 0;
                     endX = 0;
                 });
