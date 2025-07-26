@@ -8,6 +8,130 @@
     <link rel="manifest" href="manifest.json">
     <!-- Google Font: Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration - Using the provided details
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3BSf75v3qFs2xm7i-TJksrcEHELEmVpo",
+            authDomain: "potato-e7861.firebaseapp.com",
+            projectId: "potato-e7861",
+            storageBucket: "potato-e7861.firebasestorage.app",
+            messagingSenderId: "905443935896",
+            appId: "1:905443935896:web:93c9de4305e49bb6ff32ed"
+        };
+
+        // Initialize Firebase
+        window.firebaseApp = initializeApp(firebaseConfig);
+        window.firebaseAuth = getAuth(window.firebaseApp);
+        window.firebaseDb = getFirestore(window.firebaseApp);
+        window.googleAuthProvider = GoogleAuthProvider; // Expose GoogleAuthProvider
+
+        // Listen for authentication state changes
+        onAuthStateChanged(window.firebaseAuth, (user) => {
+            window.currentUserId = user ? user.uid : null; // Update global currentUserId
+            console.log('Auth state changed:', user ? user.uid : 'No user');
+            updateProfileUI(user); // Update the profile UI based on auth state
+            if (user) {
+                saveUserProfile(user); // Save/update user profile in Firestore
+            }
+        });
+
+        // Function to handle Google Sign-in
+        window.signInWithGoogle = async () => {
+            if (!window.firebaseAuth) {
+                console.error('Firebase Auth not initialized.');
+                return;
+            }
+            const provider = new window.googleAuthProvider();
+            try {
+                await signInWithPopup(window.firebaseAuth, provider);
+                console.log('Google Sign-in successful.');
+            } catch (error) {
+                console.error('Error during Google Sign-in:', error);
+                if (error.code === 'auth/popup-closed-by-user') {
+                    console.log('Google Sign-in popup was closed by the user.');
+                }
+            }
+        };
+
+        // Function to handle user sign out
+        window.signOutUser = async () => {
+            if (!window.firebaseAuth) {
+                console.error('Firebase Auth not initialized.');
+                return;
+            }
+            try {
+                await signOut(window.firebaseAuth);
+                console.log('User signed out.');
+            } catch (error) {
+                console.error('Error during sign out:', error);
+            }
+        };
+
+        // Function to update the profile UI
+        window.updateProfileUI = (user) => {
+            const profileContentDiv = document.getElementById('profile-content-area');
+            if (!profileContentDiv) return;
+
+            profileContentDiv.innerHTML = ''; // Clear existing content
+
+            if (user) {
+                // User is logged in
+                const userName = user.displayName || user.email || 'مستخدم';
+                const userEmail = user.email ? `<p style="color: var(--secondary-color); font-size: 0.95rem; margin-bottom: 0.5rem;">${user.email}</p>` : '';
+                const userPhoto = user.photoURL ? `<img src="${user.photoURL}" alt="صورة الملف الشخصي" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 1.5rem; border: 3px solid var(--primary-color); box-shadow: 0 4px 8px rgba(0,0,0,0.1);">` : '';
+
+                profileContentDiv.innerHTML = `
+                    ${userPhoto}
+                    <h2 style="color: var(--primary-color); font-size: 1.8rem; margin-bottom: 0.5rem;">أهلاً بك، ${userName}!</h2>
+                    ${userEmail}
+                    <p style="color: var(--secondary-color); font-size: 0.8rem; margin-bottom: 2rem; word-break: break-all;">معرف المستخدم (UID): <span style="font-weight: 600;">${user.uid}</span></p>
+                    <button onclick="signOutUser()" style="padding: 12px 24px; background-color: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-family: 'Cairo', sans-serif; transition: background-color 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        تسجيل الخروج
+                    </button>
+                `;
+            } else {
+                // User is not logged in
+                profileContentDiv.innerHTML = `
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
+                        أنت ليس لديك ملف شخصي. قم الآن بتسجيل الدخول أو إنشاء حساب.
+                    </p>
+                    <button onclick="signInWithGoogle()" style="padding: 12px 24px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-family: 'Cairo', sans-serif; transition: background-color 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        تسجيل الدخول باستخدام جوجل
+                    </button>
+                `;
+            }
+        };
+
+        // Function to save/update user profile in Firestore
+        window.saveUserProfile = async (user) => {
+            if (!window.firebaseDb || !user) return;
+            const userId = user.uid;
+            // Using the projectId as the appId for Firestore path consistency with your provided details
+            const appId = firebaseConfig.projectId; // Use your actual projectId here
+            const userDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/profile`, 'data');
+
+            const profileData = {
+                uid: user.uid,
+                displayName: user.displayName || null,
+                email: user.email || null,
+                photoURL: user.photoURL || null,
+                lastLogin: new Date().toISOString()
+            };
+
+            try {
+                await setDoc(userDocRef, profileData, { merge: true });
+                console.log('User profile saved/updated in Firestore:', userId);
+            } catch (e) {
+                console.error('Error saving user profile to Firestore:', e);
+            }
+        };
+    </script>
     <style>
         :root {
             --primary-color: #007bff;
@@ -592,7 +716,10 @@
         </section>
 
         <section id="profile" class="">
-            <h1>أهلاً في الملف الشخصي</h1>
+            <h1 style="margin-bottom: 2rem;">الملف الشخصي</h1>
+            <div id="profile-content-area" style="background-color: var(--active-bg); padding: 1.5rem; border-radius: 8px; text-align: center; min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 8px var(--card-shadow);">
+                <!-- Content will be dynamically loaded by JavaScript -->
+            </div>
         </section>
 
         <section id="store" class="">
@@ -813,6 +940,13 @@
             // If navigating to summaries, ensure the first subject tab is active
             if (id === 'summaries') {
                 showSubjectContent('arabic'); // Set 'اللغة العربية' as default active subject tab
+            } else if (id === 'profile') {
+                // When navigating to profile, ensure UI is updated based on current auth state
+                if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+                    updateProfileUI(window.firebaseAuth.currentUser);
+                } else {
+                    updateProfileUI(null);
+                }
             }
         }
 
