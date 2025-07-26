@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>موقعي</title>
     <style>
@@ -16,7 +16,9 @@
             --border-color: #e9ecef;
             --card-shadow: rgba(0, 0, 0, 0.08);
             --dropdown-bg: #ffffff;
-            --dropdown-item-hover: #f1f3f5;
+            --dropdown-item-hover: #f1f3f5; /* هذا اللون لم يعد يستخدم لتأثير الضغط، بل اللون النشط */
+
+            /* New variables for subject tabs (colors are now defined per-tab class) */
         }
 
         body.dark-mode {
@@ -32,12 +34,12 @@
             --dropdown-bg: #1e1e1e;
             --dropdown-item-hover: #2d2d2d;
         }
-        
+
         body {
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background: var(--background-color);
             direction: rtl;
             -webkit-tap-highlight-color: transparent;
@@ -77,12 +79,18 @@
             font-weight: 600;
             font-size: 0.8rem;
             margin-left: 1rem;
-            display: none;
+            display: flex; /* Always flex for styling */
             align-items: center;
             justify-content: center;
             transition: opacity 0.3s ease-in-out, background-color 0.3s ease;
+            cursor: pointer; /* Indicate it's clickable */
+            user-select: none; /* Prevent text selection on click */
         }
-        
+
+        .points-display:active {
+            transform: scale(0.95); /* Add active state for visual feedback */
+        }
+
         .header-icons-left {
             display: flex;
             align-items: center;
@@ -145,11 +153,11 @@
             outline: none;
             padding: 6px 12px;
             position: relative;
-            transition: all 0.15s ease;
+            transition: all 0.1s ease;
         }
 
         .bottom-nav button:active {
-            transform: scale(0.97);
+            transform: scale(0.95);
         }
 
         .bottom-nav button.active {
@@ -162,7 +170,7 @@
             justify-content: center;
             padding: 6px 12px;
             border-radius: 0.5rem;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.1s ease;
         }
 
         .bottom-nav button.active .icon-container {
@@ -174,7 +182,7 @@
             height: 24px;
             stroke: var(--inactive-color);
             fill: none;
-            transition: color 0.3s ease, transform 0.2s ease, fill 0.3s ease, stroke 0.3s ease;
+            transition: color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
         }
 
         .bottom-nav button.active svg {
@@ -201,6 +209,7 @@
             margin-top: 4px;
         }
 
+        /* تنسيق بطاقات الصفحة الرئيسية */
         .home-cards-container {
             display: flex;
             gap: 1rem;
@@ -252,7 +261,7 @@
             width: 36px;
             height: 36px;
         }
-        
+
         .store-card {
             background-color: #FFD700;
         }
@@ -261,6 +270,7 @@
             background-color: #00A693;
         }
 
+        /* تنسيق صفحة الإعدادات */
         .settings-item {
             display: flex;
             justify-content: space-between;
@@ -277,6 +287,7 @@
             color: var(--text-color);
         }
 
+        /* تنسيق مفتاح الوضع الداكن */
         .switch {
             position: relative;
             display: inline-block;
@@ -321,11 +332,12 @@
         input:checked + .slider:before {
             transform: translateX(22px);
         }
-        
+
+        /* تنسيق القائمة المنسدلة */
         .more-menu-container {
             position: relative;
             cursor: pointer;
-            margin-right: 1rem; 
+            margin-left: 1rem;
         }
 
         #more-menu-icon {
@@ -336,17 +348,17 @@
             fill: none;
             transition: transform 0.1s ease-in-out;
         }
-        
-        .more-menu-container.active #more-menu-icon {
+
+        #more-menu-icon:active {
             transform: scale(0.9);
         }
-        
+
         #more-menu-dropdown {
             display: none;
             position: absolute;
             top: 45px;
             right: auto;
-            left: 0; 
+            left: 0;
             min-width: 150px;
             background-color: var(--dropdown-bg);
             border: 1px solid var(--border-color);
@@ -360,7 +372,7 @@
         #more-menu-dropdown.active {
             display: block;
         }
-        
+
         .dropdown-item {
             display: block;
             padding: 10px 16px;
@@ -368,16 +380,144 @@
             text-decoration: none;
             cursor: pointer;
             transition: background-color 0.2s ease;
-            white-space: nowrap;
-        }
-        
-        .dropdown-item:hover {
-            background-color: var(--dropdown-item-hover);
         }
 
+        /* تم تغيير لون الخلفية عند الضغط هنا */
+        .dropdown-item:active {
+            background-color: var(--active-bg);
+        }
+
+        /* New styles for Subject Tabs */
+        .subject-tabs-container {
+            display: flex;
+            overflow-x: auto;
+            padding-bottom: 8px; /* Space for scrollbar if it appears */
+            margin-bottom: 1rem;
+            gap: 8px; /* Space between tabs */
+            justify-content: center; /* Center tabs if they don't fill width */
+        }
+
+        .subject-tab {
+            position: relative;
+            flex: 1; /* Make tabs take equal width */
+            min-width: 120px; /* Minimum width for small screens */
+            max-width: 150px; /* Max width to prevent overly wide tabs on large screens */
+            padding: 12px 16px;
+            border-radius: 9999px; /* Full rounded corners */
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            /* background-color and color will be set by specific subject classes */
+            transition: background-color 0.3s ease, color 0.3s ease, transform 0.1s ease;
+            overflow: hidden; /* Hide overflow for SVG background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .subject-tab:active {
+            transform: scale(0.97);
+        }
+
+        /* Active state for all tabs - text and icon color */
+        .subject-tab.active {
+            color: #ffffff; /* Text color is white when active */
+        }
+        .subject-tab.active .subject-icon-bg svg {
+            fill: #ffffff; /* Icon color is white when active */
+        }
+
+
+        /* Specific colors for each subject tab */
+        .subject-tab.arabic-tab {
+            background-color: #28a745; /* Green */
+            color: #ffffff; /* Default text color for this tab */
+        }
+        body.dark-mode .subject-tab.arabic-tab {
+            background-color: #4CAF50; /* Lighter green for dark mode */
+        }
+
+        .subject-tab.english-tab {
+            background-color: #007bff; /* Blue */
+            color: #ffffff; /* Default text color for this tab */
+        }
+        body.dark-mode .subject-tab.english-tab {
+            background-color: #4da6ff; /* Lighter blue for dark mode */
+        }
+
+        .subject-tab.physics-tab {
+            background-color: #ffc107; /* Yellow/Orange */
+            color: #212529; /* Dark text for light background */
+        }
+        body.dark-mode .subject-tab.physics-tab {
+            background-color: #FFEB3B; /* Brighter yellow for dark mode */
+            color: #212529; /* Keep dark text */
+        }
+
+        .subject-tab.chemistry-tab {
+            background-color: #6f42c1; /* Purple */
+            color: #ffffff; /* Default text color for this tab */
+        }
+        body.dark-mode .subject-tab.chemistry-tab {
+            background-color: #9C27B0; /* Brighter purple for dark mode */
+        }
+
+
+        .subject-tab .subject-icon-bg {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.08; /* Very subtle background */
+            transition: opacity 0.3s ease;
+        }
+
+        .subject-tab.active .subject-icon-bg {
+            opacity: 0.15; /* Slightly more visible when active */
+        }
+
+        .subject-tab .subject-icon-bg svg {
+            width: 60px; /* Larger SVG for background */
+            height: 60px;
+            fill: currentColor; /* Inherit color from text */
+            stroke: none;
+        }
+
+        .subject-tab span {
+            position: relative; /* Ensure text is above SVG */
+            z-index: 1;
+        }
+
+        /* Remove border from subject content area */
+        .subject-content-area {
+            background-color: var(--active-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            /* Removed border: 1px solid var(--border-color); */
+            text-align: right;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Custom Scrollbar Hide */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
     </style>
 </head>
-<body>
+<body class="">
 
     <header id="header-bar">
         <div class="header-icons-left">
@@ -385,7 +525,7 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
-            <div class="points-display" id="points-display" style="display: flex;">8 نقاط</div>
+            <div class="points-display" id="points-display" onclick="showTab('store')">8 نقاط</div>
         </div>
 
         <div class="more-menu-container" style="display: block;">
@@ -394,7 +534,7 @@
                 <circle cx="12" cy="5" r="1"></circle>
                 <circle cx="12" cy="19" r="1"></circle>
             </svg>
-            <div id="more-menu-dropdown">
+            <div id="more-menu-dropdown" class="">
                 <a class="dropdown-item" onclick="showTab('profile'); toggleMoreMenu();">الملف الشخصي</a>
                 <a class="dropdown-item" onclick="showTab('settings'); toggleMoreMenu();">الإعدادات</a>
                 <a class="dropdown-item" onclick="showTab('notifications'); toggleMoreMenu();">الإشعارات</a>
@@ -428,27 +568,82 @@
             </div>
         </section>
 
-        <section id="exams">
+        <section id="exams" class="">
             <h1>أهلاً في صفحة الاختبارات</h1>
         </section>
 
-        <section id="reviews">
+        <section id="reviews" class="">
             <h1>أهلاً في صفحة التقييمات</h1>
         </section>
-        
-        <section id="profile">
+
+        <section id="profile" class="">
             <h1>أهلاً في الملف الشخصي</h1>
         </section>
 
-        <section id="store">
+        <section id="store" class="">
             <h1>أهلاً في المتجر</h1>
+            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">هنا ستجد المنتجات المتاحة للشراء باستخدام النقاط.</p>
+            <button onclick="addPoints(10)" style="margin-top: 2rem; padding: 10px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                إضافة 10 نقاط (للتجربة)
+            </button>
         </section>
 
-        <section id="summaries">
-            <h1>أهلاً في صفحة الملخصات</h1>
+        <section id="summaries" class="">
+            <h1>ملخصات المواد</h1>
+            <!-- Horizontal Subject Tabs -->
+            <div class="subject-tabs-container scrollbar-hide">
+                <button class="subject-tab arabic-tab active" onclick="showSubjectContent('arabic')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 18H5V8h14v10zm-1-9H6v8h12V9zm-1-6H6c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 10h6v2H9v-2zm0 3h6v2H9v-2z" />
+                        </svg>
+                    </div>
+                    <span>اللغة العربية</span>
+                </button>
+                <button class="subject-tab english-tab" onclick="showSubjectContent('english')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86zm2 0V4.07c3.95.49 7 3.85 7 7.93s-3.05 7.44-7 7.93z" />
+                        </svg>
+                    </div>
+                    <span>اللغة الإنجليزية</span>
+                </button>
+                <button class="subject-tab physics-tab" onclick="showSubjectContent('physics')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/>
+                        </svg>
+                    </div>
+                    <span>فيزيا</span>
+                </button>
+                <button class="subject-tab chemistry-tab" onclick="showSubjectContent('chemistry')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-6c-1.1 0-2 .9-2 2v5c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V9c0-1.1-.9-2-2-2zm-2 4h-3V9h3v2zM1 1v22h22V1H1zm20 20H3V3h18v18z" />
+                        </svg>
+                    </div>
+                    <span>كيميا</span>
+                </button>
+            </div>
+
+            <!-- Subject Content Area -->
+            <div class="subject-content-area">
+                <div id="arabic-content" class="subject-content active">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة اللغة العربية تشمل النحو، الصرف، البلاغة، والأدب. يتم التركيز على قواعد الإعراب، تصريف الأفعال، فنون البلاغة مثل التشبيه والاستعارة، وتحليل النصوص الأدبية.</p>
+                </div>
+                <div id="english-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة اللغة الإنجليزية تغطي القواعد، المفردات، ومهارات الكتابة. تشمل القواعد الأساسية، بناء الجمل، توسيع المفردات، وكتابة المقالات والرسائل.</p>
+                </div>
+                <div id="physics-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة الفيزياء تركز على قوانين الحركة، الطاقة، الكهرباء، والمغناطيسية. تتناول المفاهيم الأساسية مثل القوة، الشغل، القدرة، والدوائر الكهربائية.</p>
+                </div>
+                <div id="chemistry-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة الكيمياء تشمل بنية الذرة، الجدول الدوري، أنواع الروابط الكيميائية، والتفاعلات الكيميائية الأساسية. يتم التركيز على الأحماض والقواعد، والأكسدة والاختزال.</p>
+                </div>
+            </div>
         </section>
-        
-        <section id="settings">
+
+        <section id="settings" class="">
             <h1 style="margin-bottom: 2rem;">الإعدادات</h1>
             <div class="settings-item">
                 <span>الوضع الداكن</span>
@@ -458,7 +653,7 @@
                 </label>
             </div>
         </section>
-        
+
         <section id="notifications">
             <h1>أهلاً في صفحة الإشعارات</h1>
         </section>
@@ -474,7 +669,7 @@
             </div>
             <span>الرئيسية</span>
         </button>
-        <button onclick="showTab('exams')">
+        <button onclick="showTab('exams')" class="">
             <div class="icon-container">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="currentColor"></path>
@@ -486,7 +681,7 @@
             </div>
             <span>اختبارات</span>
         </button>
-        <button onclick="showTab('reviews')">
+        <button onclick="showTab('reviews')" class="">
             <div class="icon-container">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" fill="currentColor"></path>
@@ -501,6 +696,26 @@
     </nav>
 
     <script>
+        // Global variable for points (placeholder for future backend integration)
+        let currentPoints = 8; // Initial points
+
+        // Function to update the displayed points
+        function updatePointsDisplay() {
+            const pointsDisplayElement = document.getElementById('points-display');
+            if (pointsDisplayElement) {
+                pointsDisplayElement.textContent = `${currentPoints} نقاط`;
+            }
+        }
+
+        // Placeholder function to simulate adding points
+        function addPoints(amount) {
+            currentPoints += amount;
+            updatePointsDisplay();
+            // In a real application, this would involve API calls to a backend
+            console.log(`Added ${amount} points. Total points: ${currentPoints}`);
+        }
+
+        // Function to show main tabs
         function showTab(id) {
             document.querySelectorAll('section').forEach(sec => {
                 sec.classList.remove('active');
@@ -520,13 +735,19 @@
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
-            
+
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries'].includes(id);
 
             if (isChildPage) {
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
-                pointsDisplay.style.display = 'none';
+                // Only hide points display if it's a child page AND not the store page itself
+                // If it's the store page, we want the points to remain visible and clickable
+                if (id !== 'store') {
+                   pointsDisplay.style.display = 'none';
+                } else {
+                   pointsDisplay.style.display = 'flex'; // Ensure it's visible on store page
+                }
                 moreMenuContainer.style.display = 'none';
             } else {
                 navBar.style.display = 'flex';
@@ -534,13 +755,46 @@
                 pointsDisplay.style.display = 'flex';
                 moreMenuContainer.style.display = 'block';
             }
+
+            // If navigating to summaries, ensure the first subject tab is active
+            if (id === 'summaries') {
+                showSubjectContent('arabic'); // Set 'اللغة العربية' as default active subject tab
+            }
         }
-        
+
+        // Function to toggle the more menu dropdown
         function toggleMoreMenu() {
             const dropdown = document.getElementById('more-menu-dropdown');
             dropdown.classList.toggle('active');
         }
 
+        // Function to show content for a specific subject tab
+        function showSubjectContent(subjectId) {
+            // Deactivate all subject tabs
+            document.querySelectorAll('.subject-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Activate the clicked subject tab
+            const activeTab = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+
+            // Hide all subject content divs
+            document.querySelectorAll('.subject-content').forEach(contentDiv => {
+                contentDiv.style.display = 'none';
+            });
+
+            // Show the content div for the active subject
+            const contentToShow = document.getElementById(`${subjectId}-content`);
+            if (contentToShow) {
+                contentToShow.style.display = 'block';
+            }
+        }
+
+
+        // Event listeners for header bar
         document.getElementById('more-menu-icon').addEventListener('click', (event) => {
             event.stopPropagation();
             toggleMoreMenu();
@@ -557,20 +811,22 @@
         document.getElementById('back-arrow').addEventListener('click', () => {
             showTab('home');
         });
-        
+
+        // Initial setup on DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
-            showTab('home');
-            
+            showTab('home'); // Show home tab by default
+            updatePointsDisplay(); // Initialize points display
+
             const darkModeToggle = document.getElementById('dark-mode-toggle');
             const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
-            
+
             if (isDarkMode) {
                 document.body.classList.add('dark-mode');
                 if (darkModeToggle) {
                     darkModeToggle.checked = true;
                 }
             }
-            
+
             if (darkModeToggle) {
                 darkModeToggle.addEventListener('change', () => {
                     if (darkModeToggle.checked) {
@@ -584,6 +840,5 @@
             }
         });
     </script>
-
 </body>
 </html>
