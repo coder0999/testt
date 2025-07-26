@@ -1,282 +1,1126 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>موقعي</title>
+    <!-- Link to your manifest.json for PWA installation -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Google Font: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
-// Main App Component
-function App() {
-    // Firebase Configuration - Replace with your actual Firebase config if different
-    const firebaseConfig = {
-        apiKey: "AIzaSyC3BSf75v3qFs2xm7i-TJksrcEHELEmVpo",
-        authDomain: "potato-e7861.firebaseapp.com",
-        projectId: "potato-e7861",
-        storageBucket: "potato-e7861.firebasestorage.app",
-        messagingSenderId: "905443935896",
-        appId: "1:905443935896:web:93c9de4305e49bb6ff32ed"
-    };
+    <!-- Preconnect and DNS-prefetch for Google Auth domains to speed up initial connection -->
+    <link rel="preconnect" href="https://accounts.google.com">
+    <link rel="dns-prefetch" href="https://accounts.google.com">
+    <link rel="preconnect" href="https://oauth.googleusercontent.com">
+    <link rel="dns-prefetch" href="https://oauth.googleusercontent.com">
+    <link rel="preconnect" href="https://www.gstatic.com">
+    <link rel="dns-prefetch" href="https://www.gstatic.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
 
-    // State variables
-    const [currentUserId, setCurrentUserId] = useState(null);
-    const [currentPoints, setCurrentPoints] = useState(0);
-    const [activeTab, setActiveTab] = useState('home');
-    const [isDarkMode, setIsDarkMode] = useState(false);
-    const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        // MODIFICATION: Added onSnapshot to imports for real-time updates
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-    // Refs for Firebase instances
-    const firebaseAppRef = useRef(null);
-    const firebaseAuthRef = useRef(null);
-    const firebaseDbRef = useRef(null);
-    const googleAuthProviderRef = useRef(null);
-
-    // PWA deferred prompt
-    const deferredPrompt = useRef(null);
-
-    // --- Firebase Functions ---
-
-    // Function to show a temporary message (success/error)
-    const showTemporaryMessage = useCallback((msg, type) => {
-        setMessage(msg);
-        setMessageType(type);
-        setTimeout(() => {
-            setMessage('');
-            setMessageType('');
-        }, 3000); // Message visible for 3 seconds
-    }, []);
-
-    // Function to update the displayed points
-    const updatePointsDisplay = useCallback(() => {
-        const pointsDisplayElement = document.getElementById('points-display');
-        if (pointsDisplayElement) {
-            if (currentUserId) {
-                pointsDisplayElement.textContent = `${currentPoints} نقاط`;
-            } else {
-                pointsDisplayElement.textContent = `يجب تسجيل الدخول لتفعيل عداد النقاط`;
-            }
-        }
-    }, [currentUserId, currentPoints]);
-
-    // Function to get user points from Firestore
-    const getPoints = useCallback(async () => {
-        if (!firebaseDbRef.current || !currentUserId) {
-            console.log('getPoints: Firebase DB or currentUserId not available. Setting points to 0.');
-            setCurrentPoints(0); // Default to 0 if not logged in
-            updatePointsDisplay();
-            return;
-        }
-        const userId = currentUserId;
-        const appId = firebaseConfig.projectId;
-        const pointsDocRef = doc(firebaseDbRef.current, `artifacts/${appId}/users/${userId}/points`, 'data');
-        console.log(`getPoints: Attempting to fetch points for user: ${userId} at path: artifacts/${appId}/users/${userId}/points/data`);
-
-        try {
-            const docSnap = await getDoc(pointsDocRef);
-            if (docSnap.exists()) {
-                setCurrentPoints(docSnap.data().value || 0);
-                console.log('getPoints: User points fetched from Firestore:', docSnap.data().value || 0);
-            } else {
-                // If no points document exists, initialize it to 0
-                console.log('getPoints: No points document found. Initializing to 0.');
-                await setDoc(pointsDocRef, { value: 0 });
-                setCurrentPoints(0);
-                console.log('getPoints: Points document created and initialized to 0 for user:', userId);
-            }
-        } catch (e) {
-            console.error('getPoints: Error fetching or initializing user points from Firestore:', e);
-            setCurrentPoints(0); // Fallback to 0 on error
-        } finally {
-            updatePointsDisplay(); // Always update display after attempt
-        }
-    }, [currentUserId, updatePointsDisplay]);
-
-    // Function to update user points in Firestore
-    const updatePoints = useCallback(async (newPoints) => {
-        console.log(`updatePoints: Attempting to update points to ${newPoints}. Current User ID: ${currentUserId}`);
-        if (!firebaseDbRef.current || !currentUserId) {
-            console.warn('updatePoints: Cannot update points: User not logged in or Firebase DB not initialized.');
-            return;
-        }
-        const userId = currentUserId;
-        const appId = firebaseConfig.projectId;
-        const pointsDocRef = doc(firebaseDbRef.current, `artifacts/${appId}/users/${userId}/points`, 'data');
-        console.log(`updatePoints: Updating points for user: ${userId} at path: artifacts/${appId}/users/${userId}/points/data`);
-
-        try {
-            await setDoc(pointsDocRef, { value: newPoints }, { merge: true });
-            setCurrentPoints(newPoints);
-            updatePointsDisplay();
-            console.log(`updatePoints: Points updated successfully to ${newPoints} for user: ${userId}`);
-            showTemporaryMessage('تم إضافة النقاط بنجاح!', 'success'); // Show success message
-        } catch (e) {
-            console.error('updatePoints: Error updating user points in Firestore:', e);
-            showTemporaryMessage('فشل إضافة النقاط. يرجى المحاولة مرة أخرى.', 'error'); // Show error message
-        }
-    }, [currentUserId, updatePointsDisplay, showTemporaryMessage]);
-
-    // Function to simulate adding points and update in Firestore
-    const addPoints = useCallback(async (amount) => {
-        console.log(`addPoints: Called with amount: ${amount}`);
-        if (!currentUserId) {
-            console.warn('addPoints: Cannot add points: User not logged in.');
-            showTemporaryMessage('يرجى تسجيل الدخول لإضافة النقاط.', 'error'); // Show message to user
-            return;
-        }
-        const newTotalPoints = currentPoints + amount;
-        console.log(`addPoints: Current points: ${currentPoints}, New total points: ${newTotalPoints}`);
-        await updatePoints(newTotalPoints);
-        console.log(`addPoints: Points addition process completed.`);
-    }, [currentUserId, currentPoints, updatePoints, showTemporaryMessage]);
-
-    // Function to handle Google Sign-in
-    const signInWithGoogle = useCallback(async () => {
-        if (!firebaseAuthRef.current || !googleAuthProviderRef.current) {
-            console.error('Firebase Auth or Provider not initialized.');
-            return;
-        }
-        const provider = new googleAuthProviderRef.current();
-        provider.setCustomParameters({
-            prompt: 'select_account'
-        });
-        try {
-            await signInWithPopup(firebaseAuthRef.current, provider);
-            console.log('Google Sign-in successful.');
-        } catch (error) {
-            console.error('Error during Google Sign-in:', error);
-            if (error.code === 'auth/popup-closed-by-user') {
-                console.log('Google Sign-in popup was closed by the user.');
-            }
-        }
-    }, []);
-
-    // Function to handle user sign out
-    const signOutUser = useCallback(async () => {
-        if (!firebaseAuthRef.current) {
-            console.error('Firebase Auth not initialized.');
-            return;
-        }
-        try {
-            await signOut(firebaseAuthRef.current);
-            console.log('User signed out.');
-            setCurrentPoints(0); // Reset points on sign out
-            updatePointsDisplay(); // Update display for logged out state
-        } catch (error) {
-            console.error('Error during sign out:', error);
-        }
-    }, [updatePointsDisplay]);
-
-    // Function to update the profile UI (JSX rendering)
-    const renderProfileUI = useCallback(() => {
-        if (currentUserId) {
-            const user = firebaseAuthRef.current.currentUser;
-            const userName = user?.displayName || user?.email || 'مستخدم';
-            const userEmail = user?.email ? `<p style="color: var(--secondary-color); font-size: 0.95rem; margin-bottom: 0.5rem;">${user.email}</p>` : '';
-            const userPhoto = user?.photoURL ? `<img src="${user.photoURL}" alt="صورة الملف الشخصي" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 1.5rem; border: 3px solid var(--primary-color); box-shadow: 0 4px 8px rgba(0,0,0,0.1);">` : '';
-
-            return (
-                <>
-                    <div dangerouslySetInnerHTML={{ __html: userPhoto }} /> {/* Using dangerouslySetInnerHTML for image, consider React img tag directly */}
-                    <h2 style={{ color: 'var(--primary-color)', fontSize: '1.8rem', marginBottom: '0.5rem' }}>أهلاً بك، {userName}!</h2>
-                    <div dangerouslySetInnerHTML={{ __html: userEmail }} />
-                    <p style={{ color: 'var(--secondary-color)', fontSize: '0.8rem', marginBottom: '2rem', wordBreak: 'break-all' }}>معرف المستخدم (UID): <span style={{ fontWeight: 600 }}>{currentUserId}</span></p>
-                    <button
-                        onClick={signOutUser}
-                        style={{ padding: '12px 24px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontFamily: "'Cairo', sans-serif", transition: 'background-color 0.2s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                    >
-                        تسجيل الخروج
-                    </button>
-                </>
-            );
-        } else {
-            return (
-                <>
-                    <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem' }}>
-                        أنت ليس لديك ملف شخصي. قم الآن بتسجيل الدخول أو إنشاء حساب.
-                    </p>
-                    <button
-                        onClick={signInWithGoogle}
-                        style={{ padding: '12px 24px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontFamily: "'Cairo', sans-serif", transition: 'background-color 0.2s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                    >
-                        تسجيل الدخول باستخدام جوجل
-                    </button>
-                </>
-            );
-        }
-    }, [currentUserId, signInWithGoogle, signOutUser]);
-
-    // Function to save/update user profile in Firestore
-    const saveUserProfile = useCallback(async (user) => {
-        if (!firebaseDbRef.current || !user) return;
-        const userId = user.uid;
-        const appId = firebaseConfig.projectId;
-        const userDocRef = doc(firebaseDbRef.current, `artifacts/${appId}/users/${userId}/profile`, 'data');
-
-        const profileData = {
-            uid: user.uid,
-            displayName: user.displayName || null,
-            email: user.email || null,
-            photoURL: user.photoURL || null,
-            lastLogin: new Date().toISOString()
+        // Your web app's Firebase configuration - Using the provided details
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3BSf75v3qFs2xm7i-TJksrcEHELEmVpo",
+            authDomain: "potato-e7861.firebaseapp.com",
+            projectId: "potato-e7861",
+            storageBucket: "potato-e7861.firebasestorage.app",
+            messagingSenderId: "905443935896",
+            appId: "1:905443935896:web:93c9de4305e49bb6ff32ed"
         };
 
-        try {
-            await setDoc(userDocRef, profileData, { merge: true });
-            console.log('User profile saved/updated in Firestore:', userId);
-        } catch (e) {
-            console.error('Error saving user profile to Firestore:', e);
-        }
-    }, []);
+        // Initialize Firebase
+        window.firebaseApp = initializeApp(firebaseConfig);
+        window.firebaseAuth = getAuth(window.firebaseApp);
+        window.firebaseDb = getFirestore(window.firebaseApp);
+        window.googleAuthProvider = GoogleAuthProvider; // Expose GoogleAuthProvider
 
-    // --- Effects ---
+        // Global variable to store current user's UID
+        window.currentUserId = null;
+        // Global variable for points, initialized to 0
+        window.currentPoints = 0;
+        // MODIFICATION: Global variable to hold the points listener unsubscribe function
+        window.pointsListener = null;
 
-    // Firebase Initialization and Auth State Listener
-    useEffect(() => {
-        firebaseAppRef.current = initializeApp(firebaseConfig);
-        firebaseAuthRef.current = getAuth(firebaseAppRef.current);
-        firebaseDbRef.current = getFirestore(firebaseAppRef.current);
-        googleAuthProviderRef.current = GoogleAuthProvider;
-
-        const unsubscribe = onAuthStateChanged(firebaseAuthRef.current, async (user) => {
-            setCurrentUserId(user ? user.uid : null);
-            console.log('Auth state changed (useEffect):', user ? user.uid : 'No user');
+        // MODIFICATION: Rewrote onAuthStateChanged to use a real-time listener for points
+        onAuthStateChanged(window.firebaseAuth, async (user) => {
+            window.currentUserId = user ? user.uid : null; // Update global currentUserId
+            console.log('Auth state changed:', user ? user.uid : 'No user');
+            updateProfileUI(user); // Update the profile UI based on auth state
             if (user) {
-                await saveUserProfile(user);
-                await getPoints();
+                await saveUserProfile(user); // Save/update user profile in Firestore
+                setupPointsListener(); // Set up the real-time points listener
             } else {
-                setCurrentPoints(0);
-                updatePointsDisplay();
+                // If user logs out, unsubscribe from listener and reset points
+                if (window.pointsListener) {
+                    window.pointsListener(); // This is the unsubscribe function returned by onSnapshot
+                    window.pointsListener = null;
+                }
+                window.currentPoints = 0; // Reset points
+                updatePointsDisplay(); // Update display for logged out state
             }
         });
 
-        return () => unsubscribe(); // Cleanup auth listener on unmount
-    }, [saveUserProfile, getPoints, updatePointsDisplay]);
+        // Function to handle Google Sign-in
+        window.signInWithGoogle = async () => {
+            if (!window.firebaseAuth) {
+                console.error('Firebase Auth not initialized.');
+                return;
+            }
+            const provider = new window.googleAuthProvider();
+            provider.setCustomParameters({
+                prompt: 'select_account'
+            });
+            try {
+                await signInWithPopup(window.firebaseAuth, provider);
+                console.log('Google Sign-in successful.');
+            } catch (error) {
+                console.error('Error during Google Sign-in:', error);
+                if (error.code === 'auth/popup-closed-by-user') {
+                    console.log('Google Sign-in popup was closed by the user.');
+                }
+            }
+        };
 
-    // Update points display when currentPoints or currentUserId changes
-    useEffect(() => {
-        updatePointsDisplay();
-    }, [currentPoints, currentUserId, updatePointsDisplay]);
+        // Function to handle user sign out
+        window.signOutUser = async () => {
+            if (!window.firebaseAuth) {
+                console.error('Firebase Auth not initialized.');
+                return;
+            }
+            try {
+                await signOut(window.firebaseAuth);
+                console.log('User signed out.');
+                // No need to reset points here, the onAuthStateChanged listener will handle it
+            } catch (error) {
+                console.error('Error during sign out:', error);
+            }
+        };
+        
+        // Function to update the profile UI
+        window.updateProfileUI = (user) => {
+            const profileContentDiv = document.getElementById('profile-content-area');
+            if (!profileContentDiv) return;
 
-    // PWA Installation Logic
-    useEffect(() => {
-        const handleBeforeInstallPrompt = (e) => {
+            profileContentDiv.innerHTML = ''; // Clear existing content
+
+            if (user) {
+                // User is logged in
+                const userName = user.displayName || user.email || 'مستخدم';
+                const userEmail = user.email ? `<p style="color: var(--secondary-color); font-size: 0.95rem; margin-bottom: 0.5rem;">${user.email}</p>` : '';
+                const userPhoto = user.photoURL ? `<img src="${user.photoURL}" alt="صورة الملف الشخصي" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 1.5rem; border: 3px solid var(--primary-color); box-shadow: 0 4px 8px rgba(0,0,0,0.1);">` : '';
+
+                profileContentDiv.innerHTML = `
+                    ${userPhoto}
+                    <h2 style="color: var(--primary-color); font-size: 1.8rem; margin-bottom: 0.5rem;">أهلاً بك، ${userName}!</h2>
+                    ${userEmail}
+                    <p style="color: var(--secondary-color); font-size: 0.8rem; margin-bottom: 2rem; word-break: break-all;">معرف المستخدم (UID): <span style="font-weight: 600;">${user.uid}</span></p>
+                    <button onclick="signOutUser()" style="padding: 12px 24px; background-color: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-family: 'Cairo', sans-serif; transition: background-color 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        تسجيل الخروج
+                    </button>
+                `;
+            } else {
+                // User is not logged in
+                profileContentDiv.innerHTML = `
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
+                        أنت ليس لديك ملف شخصي. قم الآن بتسجيل الدخول أو إنشاء حساب.
+                    </p>
+                    <button onclick="signInWithGoogle()" style="padding: 12px 24px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-family: 'Cairo', sans-serif; transition: background-color 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        تسجيل الدخول باستخدام جوجل
+                    </button>
+                `;
+            }
+        };
+
+        // Function to save/update user profile in Firestore
+        window.saveUserProfile = async (user) => {
+            if (!window.firebaseDb || !user) return;
+            const userId = user.uid;
+            const appId = firebaseConfig.projectId;
+            const userDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/profile`, 'data');
+
+            const profileData = {
+                uid: user.uid,
+                displayName: user.displayName || null,
+                email: user.email || null,
+                photoURL: user.photoURL || null,
+                lastLogin: new Date().toISOString()
+            };
+
+            try {
+                await setDoc(userDocRef, profileData, { merge: true });
+                console.log('User profile saved/updated in Firestore:', userId);
+            } catch (e) {
+                console.error('Error saving user profile to Firestore:', e);
+            }
+        };
+
+        // MODIFICATION: Replaced getPoints with a function to set up a real-time listener
+        window.setupPointsListener = () => {
+            if (window.pointsListener) {
+                window.pointsListener(); // Unsubscribe from old listener
+            }
+
+            if (!window.firebaseDb || !window.currentUserId) {
+                window.currentPoints = 0;
+                updatePointsDisplay();
+                return;
+            }
+
+            const userId = window.currentUserId;
+            const appId = firebaseConfig.projectId;
+            const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
+
+            window.pointsListener = onSnapshot(pointsDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    window.currentPoints = docSnap.data().value || 0;
+                    console.log('Points updated from listener:', window.currentPoints);
+                } else {
+                    setDoc(pointsDocRef, { value: 0 }); // Initialize if doesn't exist
+                    window.currentPoints = 0;
+                    console.log('Points document created and initialized to 0 for user:', userId);
+                }
+                updatePointsDisplay();
+            }, (error) => {
+                console.error('Error in points listener:', error);
+                window.currentPoints = 0;
+                updatePointsDisplay();
+            });
+        };
+
+        // MODIFICATION: Simplified updatePoints to only write to Firestore.
+        // The listener will now handle updating the UI and local state.
+        window.updatePoints = async (newPoints) => {
+            if (!window.firebaseDb || !window.currentUserId) {
+                console.warn('Cannot update points: User not logged in.');
+                return;
+            }
+            const userId = window.currentUserId;
+            const appId = firebaseConfig.projectId;
+            const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
+
+            try {
+                await setDoc(pointsDocRef, { value: newPoints }, { merge: true });
+                console.log(`Points update request sent to Firestore with value: ${newPoints}`);
+            } catch (e) {
+                console.error('Error updating user points in Firestore:', e);
+            }
+        };
+    </script>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --active-bg: #e6f2ff;
+            --inactive-color: #999;
+            --background-color: #ffffff;
+            --text-color: #212529;
+            --icon-active-fill: #007bff;
+            --border-color: #e9ecef;
+            --card-shadow: rgba(0, 0, 0, 0.08);
+            --dropdown-bg: #ffffff;
+            --dropdown-item-hover: #f1f3f5;
+        }
+
+        body.dark-mode {
+            --primary-color: #4da6ff;
+            --secondary-color: #adb5bd;
+            --active-bg: #1e3a5a;
+            --inactive-color: #6c757d;
+            --background-color: #121212;
+            --text-color: #e9e9e9;
+            --icon-active-fill: #4da6ff;
+            --border-color: #2d2d2d;
+            --card-shadow: rgba(0, 0, 0, 0.3);
+            --dropdown-bg: #1e1e1e;
+            --dropdown-item-hover: #2d2d2d;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Cairo', sans-serif; /* Changed font to Cairo */
+            background: var(--background-color);
+            direction: rtl;
+            -webkit-tap-highlight-color: transparent;
+            color: var(--text-color);
+            font-size: 16px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-y: auto; /* Allow vertical scrolling for main content */
+        }
+
+        /* Hide browser scrollbar globally */
+        body::-webkit-scrollbar {
+            display: none;
+        }
+        body {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+
+        #header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+            padding: 0 1.25rem;
+            background-color: var(--background-color);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        #back-arrow {
+            display: none;
+            width: 24px;
+            height: 24px;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .points-display {
+            background-color: var(--active-bg);
+            color: var(--primary-color);
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-left: 1rem;
+            display: flex; /* Always flex for styling */
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s ease-in-out, background-color 0.3s ease;
+            cursor: pointer; /* Indicate it's clickable */
+            user-select: none; /* Prevent text selection on click */
+        }
+
+        .points-display:active {
+            transform: scale(0.95); /* Add active state for visual feedback */
+        }
+
+        .header-icons-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        main {
+            padding: 2rem 1.25rem;
+            padding-bottom: 80px;
+            text-align: center;
+            background-color: var(--background-color);
+            min-height: calc(100vh - 70px - 50px);
+            padding-top: calc(50px + 2rem);
+            transition: background-color 0.3s ease;
+            overflow-y: auto; /* Ensure main content can scroll */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+
+        /* Hide main content scrollbar if it appears */
+        main::-webkit-scrollbar {
+            display: none;
+        }
+        main {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        section {
+            display: none;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 70px;
+            background-color: var(--background-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            transition: background-color 0.3s ease, border-top-color 0.3s ease;
+        }
+
+        .bottom-nav button {
+            background: none;
+            border: none;
+            color: var(--inactive-color);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            outline: none;
+            padding: 6px 12px;
+            position: relative;
+            transition: all 0.1s ease;
+        }
+
+        .bottom-nav button:active {
+            transform: scale(0.95);
+        }
+
+        .bottom-nav button.active {
+            color: var(--primary-color);
+        }
+
+        .bottom-nav button .icon-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            border-radius: 0.5rem;
+            transition: background-color 0.1s ease;
+        }
+
+        .bottom-nav button.active .icon-container {
+            background-color: var(--active-bg);
+        }
+
+        .bottom-nav button svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--inactive-color);
+            fill: none;
+            transition: color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+        }
+
+        .bottom-nav button.active svg {
+            fill: none;
+            stroke: var(--icon-active-fill);
+        }
+
+        .bottom-nav button[onclick="showTab('exams')"].active svg,
+        .bottom-nav button[onclick="showTab('reviews')"].active svg {
+            fill: var(--icon-active-fill);
+            stroke: var(--icon-active-fill);
+        }
+
+        .bottom-nav button[onclick="showTab('exams')"].active svg path[stroke="white"],
+        .bottom-nav button[onclick="showTab('exams')"].active svg line[stroke="white"],
+        .bottom-nav button[onclick="showTab('exams')"].active svg polyline[stroke="white"],
+        .bottom-nav button[onclick="showTab('reviews')"].active svg path[stroke="white"],
+        .bottom-nav button[onclick="showTab('reviews')"].active svg line[stroke="white"],
+        .bottom-nav button[onclick="showTab('reviews')"].active svg polyline[stroke="white"] {
+            stroke: white;
+        }
+
+        .bottom-nav button span {
+            margin-top: 4px;
+        }
+
+        /* تنسيق بطاقات الصفحة الرئيسية */
+        .home-cards-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: nowrap;
+        }
+
+        .card {
+            width: 40%;
+            min-width: 120px;
+            aspect-ratio: 1 / 1;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px var(--card-shadow);
+            position: relative;
+            padding: 1rem;
+            text-align: right;
+            cursor: pointer;
+            transition: transform 0.1s ease-in-out, box-shadow 0.3s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+
+        .card:active {
+            transform: scale(0.97);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+
+        .card-description {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.8);
+            position: absolute;
+            top: 3.5rem;
+            right: 1rem;
+        }
+
+        .card svg {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            width: 36px;
+            height: 36px;
+        }
+
+        .store-card {
+            background-color: #FFD700;
+        }
+
+        .summaries-card {
+            background-color: #00A693;
+        }
+
+        /* تنسيق صفحة الإعدادات */
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--background-color);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: background-color 0.3s ease;
+            margin-bottom: 1rem; /* Added margin for spacing */
+        }
+
+        .settings-item span {
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+
+        /* تنسيق مفتاح الوضع الداكن */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 28px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        /* تنسيق القائمة المنسدلة */
+        .more-menu-container {
+            position: relative;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+
+        #more-menu-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--secondary-color);
+            stroke: currentColor;
+            fill: none;
+            transition: transform 0.1s ease-in-out;
+        }
+
+        #more-menu-icon:active {
+            transform: scale(0.9);
+        }
+
+        #more-menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 45px;
+            right: auto;
+            left: 0;
+            min-width: 150px;
+            background-color: var(--dropdown-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            padding: 8px 0;
+            text-align: right;
+        }
+
+        #more-menu-dropdown.active {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 10px 16px;
+            color: var(--text-color);
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        /* تم تغيير لون الخلفية عند الضغط هنا */
+        .dropdown-item:active {
+            background-color: var(--active-bg);
+        }
+
+        /* New styles for Subject Tabs */
+        .subject-tabs-container {
+            display: flex;
+            overflow-x: auto;
+            padding-bottom: 8px; /* Space for scrollbar if it appears */
+            margin-bottom: 1rem;
+            gap: 8px; /* Space between tabs */
+            justify-content: flex-start; /* Align tabs to start, allowing scroll */
+            padding-right: 1.25rem; /* Padding at the right end for scroll visibility */
+            padding-left: 1.25rem; /* Padding at the left end for scroll visibility */
+            margin-right: -1.25rem; /* Compensate for padding to extend to edge */
+            margin-left: -1.25rem; /* Compensate for padding to extend to edge */
+        }
+
+        .subject-tab {
+            position: relative;
+            flex-shrink: 0; /* Prevent shrinking */
+            width: 140px; /* Fixed width for consistent size on mobile */
+            height: 60px; /* Fixed height for consistent size */
+            padding: 0; /* Padding handled by internal elements */
+            border-radius: 12px; /* Rounded corners like the settings item */
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            background-color: var(--background-color); /* Unified background like settings item */
+            color: var(--text-color); /* Default text color */
+            box-shadow: 0 2px 4px var(--card-shadow); /* Subtle shadow for all tabs */
+            transition: background-color 0.3s ease, color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+            overflow: hidden; /* Hide overflow for SVG background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color); /* Border like the settings item */
+        }
+
+        .subject-tab:active {
+            transform: scale(0.97);
+        }
+
+        /* Active state for all tabs */
+        .subject-tab.active {
+            background-color: var(--primary-color); /* Primary blue for active tab */
+            color: #ffffff; /* White text when active */
+            border-color: var(--primary-color); /* Active border color */
+        }
+        .subject-tab.active .subject-icon-bg svg {
+            fill: #ffffff; /* White icon when active */
+        }
+        .subject-tab .subject-icon-bg svg {
+            fill: var(--inactive-color); /* Inactive icon color */
+        }
+        body.dark-mode .subject-tab .subject-icon-bg svg {
+            fill: var(--secondary-color); /* Dark mode inactive icon color */
+        }
+
+
+        .subject-tab .subject-icon-bg {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.08; /* Very subtle background */
+            transition: opacity 0.3s ease;
+        }
+
+        .subject-tab.active .subject-icon-bg {
+            opacity: 0.15; /* Slightly more visible when active */
+        }
+
+        .subject-tab .subject-icon-bg svg {
+            width: 60px; /* Larger SVG for background */
+            height: 60px;
+            stroke: none;
+        }
+
+        .subject-tab span {
+            position: relative; /* Ensure text is above SVG */
+            z-index: 1;
+            padding: 0 16px; /* Add padding to text itself */
+            font-weight: 700; /* Made font bolder (700 for Cairo) */
+        }
+
+        /* Removed border from subject content area */
+        .subject-content-area {
+            background-color: var(--active-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: right;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Add overflow-x hidden to prevent horizontal scrollbar from appearing on content */
+            overflow-x: hidden;
+            position: relative; /* Needed for absolute positioning of content for transitions */
+        }
+
+        /* Keyframes for spin animation */
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .animate-spin-infinite {
+          animation: spin 1s linear infinite; /* Continuous spin */
+        }
+
+        /* Custom Scrollbar Hide */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="">
+
+    <header id="header-bar">
+        <div class="header-icons-left">
+            <svg id="back-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right" style="display: none;">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+            <div class="points-display" id="points-display" onclick="showTab('store')"></div>
+        </div>
+
+        <div class="more-menu-container" style="display: block;">
+            <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-more-vertical">
+                <circle cx="12" cy="12" r="1"></circle>
+                <circle cx="12" cy="5" r="1"></circle>
+                <circle cx="12" cy="19" r="1"></circle>
+            </svg>
+            <div id="more-menu-dropdown" class="">
+                <a class="dropdown-item" onclick="showTab('profile'); toggleMoreMenu();">الملف الشخصي</a>
+                <a class="dropdown-item" onclick="showTab('settings'); toggleMoreMenu();">الإعدادات</a>
+                <a class="dropdown-item" onclick="showTab('notifications'); toggleMoreMenu();">الإشعارات</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="home" class="active">
+            <div class="home-cards-container">
+                <a class="card summaries-card" onclick="showTab('summaries')">
+                    <h2 class="card-title">الملخصات</h2>
+                    <p class="card-description">جميع ملخصات المواد بملحقاتها</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        <line x1="10" y1="6" x2="16" y2="6"></line>
+                        <line x1="10" y1="10" x2="16" y2="10"></line>
+                        <line x1="10" y1="14" x2="16" y2="14"></line>
+                    </svg>
+                </a>
+                <a class="card store-card" onclick="showTab('store')">
+                    <h2 class="card-title">المتجر</h2>
+                    <p class="card-description">تقدر ستبدل النقاط هنا</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                </a>
+            </div>
+        </section>
+
+        <section id="exams" class="">
+            <h1>أهلاً في صفحة الاختبارات</h1>
+        </section>
+
+        <section id="reviews" class="">
+            <h1>أهلاً في صفحة التقييمات</h1>
+        </section>
+
+        <section id="profile" class="">
+            <h1 style="margin-bottom: 2rem;">الملف الشخصي</h1>
+            <div id="profile-content-area" style="background-color: var(--active-bg); padding: 1.5rem; border-radius: 8px; text-align: center; min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 8px var(--card-shadow);">
+                <!-- Content will be dynamically loaded by JavaScript -->
+            </div>
+        </section>
+
+        <section id="store" class="">
+            <h1>أهلاً في المتجر</h1>
+            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">هنا ستجد المنتجات المتاحة للشراء باستخدام النقاط.</p>
+            <button onclick="addPoints(10)" style="margin-top: 2rem; padding: 10px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                إضافة 10 نقاط (للتجربة)
+            </button>
+        </section>
+
+        <section id="summaries" class="">
+            <!-- Horizontal Subject Tabs -->
+            <div class="subject-tabs-container scrollbar-hide">
+                <button class="subject-tab" onclick="showSubjectContent('arabic')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 18H5V8h14v10zm-1-9H6v8h12V9zm-1-6H6c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 10h6v2H9v-2zm0 3h6v2H9v-2z" />
+                        </svg>
+                    </div>
+                    <span>اللغة العربية</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('english')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86zm2 0V4.07c3.95.49 7 3.85 7 7.93s-3.05 7.44-7 7.93z" />
+                        </svg>
+                    </div>
+                    <span>اللغة الإنجليزية</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('physics')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/>
+                        </svg>
+                    </div>
+                    <span>فيزيا</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('chemistry')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-6c-1.1 0-2 .9-2 2v5c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V9c0-1.1-.9-2-2-2zm-2 4h-3V9h3v2zM1 1v22h22V1H1zm20 20H3V3h18v18z" />
+                        </svg>
+                    </div>
+                    <span>كيميا</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('pure-math')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                        </svg>
+                    </div>
+                    <span>البحتة</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('applied-math')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                        </svg>
+                    </div>
+                    <span>التطبيقية</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('history')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 4H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-1 16H6V6h12v14zM9 8h6v2H9V8zm0 3h6v2H9v-2zm0 3h4v2H9v-2z"/>
+                        </svg>
+                    </div>
+                    <span>التاريخ</span>
+                </button>
+            </div>
+
+            <!-- Subject Content Area -->
+            <div class="subject-content-area" id="subject-content-area">
+                <div id="arabic-content" class="subject-content active">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة اللغة العربية تشمل النحو، الصرف، البلاغة، والأدب. يتم التركيز على قواعد الإعراب، تصريف الأفعال، فنون البلاغة مثل التشبيه والاستعارة، وتحليل النصوص الأدبية.</p>
+                </div>
+                <div id="english-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة اللغة الإنجليزية تغطي القواعد، المفردات، ومهارات الكتابة. تشمل القواعد الأساسية، بناء الجمل، توسيع المفردات، وكتابة المقالات والرسائل.</p>
+                </div>
+                <div id="physics-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة الفيزياء تركز على قوانين الحركة، الطاقة، الكهرباء، والمغناطيسية. تتناول المفاهيم الأساسية مثل القوة، الشغل، القدرة، والدوائر الكهربائية.</p>
+                </div>
+                <div id="chemistry-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة الكيمياء تشمل بنية الذرة، الجدول الدوري، أنواع الروابط الكيميائية، والتفاعلات الكيميائية الأساسية. يتم التركيز على الأحماض والقواعد، والأكسدة والاختزال.</p>
+                </div>
+                <div id="pure-math-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة البحتة تركز على الجبر والهندسة التحليلية وحساب التفاضل والتكامل. تتناول المفاهيم الرياضية المجردة وتطبيقاتها النظرية.</p>
+                </div>
+                <div id="applied-math-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة التطبيقية تشمل الميكانيكا والإحصاء والاحتمالات. تركز على تطبيق المفاهيم الرياضية لحل المشكلات الواقعية.</p>
+                </div>
+                <div id="history-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة التاريخ تغطي الفترات التاريخية الهامة، الأحداث الرئيسية، والشخصيات المؤثرة. تركز على فهم التطورات الحضارية والسياسية.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="settings" class="">
+            <h1 style="margin-bottom: 2rem;">الإعدادات</h1>
+            <div class="settings-item">
+                <span>الوضع الداكن</span>
+                <label class="switch">
+                    <input type="checkbox" id="dark-mode-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item" id="install-app-item" style="display: none;">
+                <span>تثبيت التطبيق</span>
+                <button onclick="installApp()" id="install-button-emoji" style="background: none; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <span id="install-emoji" style="font-size: 24px; transition: transform 0.3s ease;">📥</span>
+                </button>
+            </div>
+        </section>
+
+        <section id="notifications">
+            <h1>أهلاً في صفحة الإشعارات</h1>
+        </section>
+    </main>
+
+    <nav class="bottom-nav" style="display: flex;">
+        <button onclick="showTab('home')" class="active">
+            <div class="icon-container">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <path d="M9 22V12h6v10"></path>
+                </svg>
+            </div>
+            <span>الرئيسية</span>
+        </button>
+        <button onclick="showTab('exams')" class="">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="currentColor"></path>
+                    <polyline points="14 2 14 8 20 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
+                    <line x1="10" y1="9" x2="8" y2="9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
+                </svg>
+            </div>
+            <span>اختبارات</span>
+        </button>
+        <button onclick="showTab('reviews')" class="">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" fill="currentColor"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" fill="currentColor"></path>
+                    <path d="M12 3v18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <path d="M7 7h-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <path d="M17 7h5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </div>
+            <span>التقييمات</span>
+        </button>
+    </nav>
+
+    <script>
+        let deferredPrompt; // To store the beforeinstallprompt event
+
+        // Function to update the displayed points
+        // This function is now called by the onSnapshot listener
+        function updatePointsDisplay() {
+            const pointsDisplayElement = document.getElementById('points-display');
+            if (pointsDisplayElement) {
+                if (window.currentUserId) {
+                    pointsDisplayElement.textContent = `${window.currentPoints} نقاط`;
+                } else {
+                    pointsDisplayElement.textContent = `يجب تسجيل الدخول لتفعيل عداد النقاط`;
+                }
+            }
+        }
+
+        // Function to add points. It now relies on the listener to update the UI.
+        async function addPoints(amount) {
+            if (!window.currentUserId) {
+                console.warn('Cannot add points: User not logged in.');
+                // You could add a visual notification here instead of an alert
+                return;
+            }
+            // The listener ensures window.currentPoints is always up-to-date
+            const newTotalPoints = window.currentPoints + amount;
+            await window.updatePoints(newTotalPoints);
+            console.log(`Requested to add ${amount} points. New total will be ${newTotalPoints}.`);
+        }
+
+        // Function to show main tabs
+        function showTab(id) {
+            document.querySelectorAll('section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+            document.getElementById(id).classList.add('active');
+
+            document.querySelectorAll('.bottom-nav button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            const navButton = document.querySelector(`.bottom-nav button[onclick="showTab('${id}')"]`);
+            if (navButton) {
+                navButton.classList.add('active');
+            }
+
+            const navBar = document.querySelector('.bottom-nav');
+            const backArrow = document.getElementById('back-arrow');
+            const pointsDisplay = document.getElementById('points-display');
+            const moreMenuContainer = document.querySelector('.more-menu-container');
+
+            const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries'].includes(id);
+
+            if (isChildPage) {
+                navBar.style.display = 'none';
+                backArrow.style.display = 'block';
+                if (id !== 'store') {
+                   pointsDisplay.style.display = 'none';
+                } else {
+                   pointsDisplay.style.display = 'flex';
+                }
+                moreMenuContainer.style.display = 'none';
+            } else {
+                navBar.style.display = 'flex';
+                backArrow.style.display = 'none';
+                pointsDisplay.style.display = 'flex';
+                moreMenuContainer.style.display = 'block';
+            }
+
+            if (id === 'summaries') {
+                showSubjectContent('arabic');
+            } else if (id === 'profile') {
+                if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+                    updateProfileUI(window.firebaseAuth.currentUser);
+                } else {
+                    updateProfileUI(null);
+                }
+            }
+        }
+
+        // Function to toggle the more menu dropdown
+        function toggleMoreMenu() {
+            const dropdown = document.getElementById('more-menu-dropdown');
+            dropdown.classList.toggle('active');
+        }
+
+        // Function to show content for a specific subject tab
+        function showSubjectContent(subjectId) {
+            document.querySelectorAll('.subject-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            const activeTab = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+
+            document.querySelectorAll('.subject-content').forEach(contentDiv => {
+                contentDiv.style.display = 'none';
+            });
+
+            const contentToShow = document.getElementById(`${subjectId}-content`);
+            if (contentToShow) {
+                contentToShow.style.display = 'block';
+            }
+        }
+
+        // PWA Installation Logic
+        window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
-            deferredPrompt.current = e;
+            deferredPrompt = e;
             const installAppItem = document.getElementById('install-app-item');
             if (installAppItem) {
                 installAppItem.style.display = 'flex';
             }
             console.log('beforeinstallprompt event fired.');
-        };
+        });
 
-        const handleAppInstalled = () => {
+        async function installApp() {
+            const installEmojiSpan = document.getElementById('install-emoji');
+            if (installEmojiSpan) {
+                installEmojiSpan.textContent = '�';
+                installEmojiSpan.classList.add('animate-spin-infinite');
+
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        console.log('User accepted the A2HS prompt');
+                        installEmojiSpan.textContent = '✅';
+                        installEmojiSpan.classList.remove('animate-spin-infinite');
+                        const installAppItem = document.getElementById('install-app-item');
+                        if (installAppItem) {
+                            installAppItem.style.display = 'none';
+                        }
+                    } else {
+                        console.log('User dismissed the A2HS prompt');
+                        installEmojiSpan.textContent = '📥';
+                        installEmojiSpan.classList.remove('animate-spin-infinite');
+                    }
+                    deferredPrompt = null;
+                } else {
+                    console.log('PWA installation prompt not available or already shown.');
+                    installEmojiSpan.textContent = '❌';
+                    installEmojiSpan.classList.remove('animate-spin-infinite');
+                    const installAppItem = document.getElementById('install-app-item');
+                    if (installAppItem) {
+                        installAppItem.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('appinstalled', () => {
             console.log('PWA was installed');
             const installAppItem = document.getElementById('install-app-item');
             if (installAppItem) {
                 installAppItem.style.display = 'none';
             }
-        };
+        });
 
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.addEventListener('appinstalled', handleAppInstalled);
 
         // Register Service Worker
         if ('serviceWorker' in navigator) {
@@ -291,968 +1135,88 @@ function App() {
             });
         }
 
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-            window.removeEventListener('appinstalled', handleAppInstalled);
-        };
-    }, []);
 
-    // Dark Mode Toggle Effect
-    useEffect(() => {
-        const darkModeToggle = document.getElementById('dark-mode-toggle');
-        const storedDarkMode = localStorage.getItem('darkMode');
+        // Event listeners for header bar
+        document.getElementById('more-menu-icon').addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleMoreMenu();
+        });
 
-        if (storedDarkMode === 'enabled') {
-            setIsDarkMode(true);
-            document.body.classList.add('dark-mode');
-            if (darkModeToggle) darkModeToggle.checked = true;
-        } else {
-            setIsDarkMode(false);
-            document.body.classList.remove('dark-mode');
-            if (darkModeToggle) darkModeToggle.checked = false;
-        }
-
-        const handleChange = (e) => {
-            if (e.target.checked) {
-                document.body.classList.add('dark-mode');
-                localStorage.setItem('darkMode', 'enabled');
-                setIsDarkMode(true);
-            } else {
-                document.body.classList.remove('dark-mode');
-                localStorage.setItem('darkMode', 'disabled');
-                setIsDarkMode(false);
+        document.addEventListener('click', (event) => {
+            const dropdown = document.getElementById('more-menu-dropdown');
+            const moreMenuIcon = document.getElementById('more-menu-icon');
+            if (!dropdown.contains(event.target) && !moreMenuIcon.contains(event.target)) {
+                dropdown.classList.remove('active');
             }
-        };
+        });
 
-        if (darkModeToggle) {
-            darkModeToggle.addEventListener('change', handleChange);
-        }
+        document.getElementById('back-arrow').addEventListener('click', () => {
+            showTab('home');
+        });
 
-        return () => {
-            if (darkModeToggle) {
-                darkModeToggle.removeEventListener('change', handleChange);
-            }
-        };
-    }, []); // Empty dependency array means this runs once on mount
-
-    // Swipe functionality for subject content area
-    useEffect(() => {
+        // Swipe functionality for subject content area
         let startX = 0;
         let endX = 0;
-        const swipeThreshold = 50; // Minimum pixels to count as a swipe
+        const swipeThreshold = 50;
 
-        const subjectContentArea = document.getElementById('subject-content-area');
-        if (subjectContentArea) {
-            const handleTouchStart = (e) => {
-                startX = e.touches[0].clientX;
-            };
+        document.addEventListener('DOMContentLoaded', () => {
+            showTab('home');
 
-            const handleTouchMove = (e) => {
-                endX = e.touches[0].clientX;
-            };
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
 
-            const handleTouchEnd = () => {
-                const diffX = startX - endX;
-
-                const subjectContents = Array.from(document.querySelectorAll('.subject-content'));
-                const subjectIds = subjectContents.map(content => content.id.replace('-content', ''));
-
-                const activeSubjectContent = document.querySelector('.subject-content.active');
-                if (!activeSubjectContent) return;
-                const currentSubjectId = activeSubjectContent.id.replace('-content', '');
-                const currentIndex = subjectIds.indexOf(currentSubjectId);
-
-                if (Math.abs(diffX) > swipeThreshold) {
-                    if (diffX > 0) { // Swiped left (move to next subject in RTL)
-                        const nextIndex = (currentIndex + 1) % subjectIds.length;
-                        showSubjectContent(subjectIds[nextIndex]);
-                    } else { // Swiped right (move to previous subject in RTL)
-                        const prevIndex = (currentIndex - 1 + subjectIds.length) % subjectIds.length;
-                        showSubjectContent(subjectIds[prevIndex]);
-                    }
-                }
-                startX = 0;
-                endX = 0;
-            };
-
-            subjectContentArea.addEventListener('touchstart', handleTouchStart);
-            subjectContentArea.addEventListener('touchmove', handleTouchMove);
-            subjectContentArea.addEventListener('touchend', handleTouchEnd);
-
-            return () => {
-                subjectContentArea.removeEventListener('touchstart', handleTouchStart);
-                subjectContentArea.removeEventListener('touchmove', handleTouchMove);
-                subjectContentArea.removeEventListener('touchend', handleTouchEnd);
-            };
-        }
-    }, [activeTab]); // Re-run if activeTab changes, ensuring listener is on correct element
-
-
-    // --- UI Logic Functions ---
-
-    const showTab = (id) => {
-        setActiveTab(id);
-
-        // Update bottom nav active state
-        document.querySelectorAll('.bottom-nav button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        const navButton = document.querySelector(`.bottom-nav button[onclick="showTab('${id}')"]`);
-        if (navButton) {
-            navButton.classList.add('active');
-        }
-
-        const navBar = document.querySelector('.bottom-nav');
-        const backArrow = document.getElementById('back-arrow');
-        const pointsDisplay = document.getElementById('points-display');
-        const moreMenuContainer = document.querySelector('.more-menu-container');
-
-        const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries'].includes(id);
-
-        if (isChildPage) {
-            if (navBar) navBar.style.display = 'none';
-            if (backArrow) backArrow.style.display = 'block';
-            if (id !== 'store' && pointsDisplay) {
-                pointsDisplay.style.display = 'none';
-            } else if (pointsDisplay) {
-                pointsDisplay.style.display = 'flex';
-            }
-            if (moreMenuContainer) moreMenuContainer.style.display = 'none';
-        } else {
-            if (navBar) navBar.style.display = 'flex';
-            if (backArrow) backArrow.style.display = 'none';
-            if (pointsDisplay) pointsDisplay.style.display = 'flex';
-            if (moreMenuContainer) moreMenuContainer.style.display = 'block';
-        }
-
-        if (id === 'summaries') {
-            showSubjectContent('arabic');
-        }
-    };
-
-    const toggleMoreMenu = () => {
-        const dropdown = document.getElementById('more-menu-dropdown');
-        if (dropdown) {
-            dropdown.classList.toggle('active');
-        }
-    };
-
-    const showSubjectContent = (subjectId) => {
-        document.querySelectorAll('.subject-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-
-        const activeTabElement = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
-        if (activeTabElement) {
-            activeTabElement.classList.add('active');
-        }
-
-        document.querySelectorAll('.subject-content').forEach(contentDiv => {
-            contentDiv.style.display = 'none';
-        });
-
-        const contentToShow = document.getElementById(`${subjectId}-content`);
-        if (contentToShow) {
-            contentToShow.style.display = 'block';
-        }
-    };
-
-    const installApp = async () => {
-        const installEmojiSpan = document.getElementById('install-emoji');
-        if (installEmojiSpan) {
-            installEmojiSpan.textContent = '🔄';
-            installEmojiSpan.classList.add('animate-spin-infinite');
-
-            if (deferredPrompt.current) {
-                deferredPrompt.current.prompt();
-                const { outcome } = await deferredPrompt.current.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('User accepted the A2HS prompt');
-                    installEmojiSpan.textContent = '✅';
-                    installEmojiSpan.classList.remove('animate-spin-infinite');
-                    const installAppItem = document.getElementById('install-app-item');
-                    if (installAppItem) {
-                        installAppItem.style.display = 'none';
-                    }
-                } else {
-                    console.log('User dismissed the A2HS prompt');
-                    installEmojiSpan.textContent = '📥';
-                    installEmojiSpan.classList.remove('animate-spin-infinite');
-                }
-                deferredPrompt.current = null;
-            } else {
-                console.log('PWA installation prompt not available or already shown.');
-                installEmojiSpan.textContent = '❌';
-                installEmojiSpan.classList.remove('animate-spin-infinite');
-                const installAppItem = document.getElementById('install-app-item');
-                if (installAppItem) {
-                    installAppItem.style.display = 'none';
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                if (darkModeToggle) {
+                    darkModeToggle.checked = true;
                 }
             }
-        }
-    };
 
-    return (
-        <div className="App">
-            <style jsx>{`
-                :root {
-                    --primary-color: #007bff;
-                    --secondary-color: #6c757d;
-                    --active-bg: #e6f2ff;
-                    --inactive-color: #999;
-                    --background-color: #ffffff;
-                    --text-color: #212529;
-                    --icon-active-fill: #007bff;
-                    --border-color: #e9ecef;
-                    --card-shadow: rgba(0, 0, 0, 0.08);
-                    --dropdown-bg: #ffffff;
-                    --dropdown-item-hover: #f1f3f5;
-                }
-
-                body.dark-mode {
-                    --primary-color: #4da6ff;
-                    --secondary-color: #adb5bd;
-                    --active-bg: #1e3a5a;
-                    --inactive-color: #6c757d;
-                    --background-color: #121212;
-                    --text-color: #e9e9e9;
-                    --icon-active-fill: #4da6ff;
-                    --border-color: #2d2d2d;
-                    --card-shadow: rgba(0, 0, 0, 0.3);
-                    --dropdown-bg: #1e1e1e;
-                    --dropdown-item-hover: #2d2d2d;
-                }
-
-                body {
-                    margin: 0;
-                    padding: 0;
-                    min-height: 100vh;
-                    font-family: 'Cairo', sans-serif;
-                    background: var(--background-color);
-                    direction: rtl;
-                    -webkit-tap-highlight-color: transparent;
-                    color: var(--text-color);
-                    font-size: 16px;
-                    transition: background-color 0.3s ease, color 0.3s ease;
-                    overflow-y: auto;
-                }
-
-                body::-webkit-scrollbar {
-                    display: none;
-                }
-                body {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-
-                #header-bar {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    height: 50px;
-                    padding: 0 1.25rem;
-                    background-color: var(--background-color);
-                    border-bottom: 1px solid var(--border-color);
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-                    position: fixed;
-                    top: 0;
-                    width: 100%;
-                    z-index: 1000;
-                }
-
-                #back-arrow {
-                    display: none;
-                    width: 24px;
-                    height: 24px;
-                    color: var(--primary-color);
-                    cursor: pointer;
-                }
-
-                .points-display {
-                    background-color: var(--active-bg);
-                    color: var(--primary-color);
-                    padding: 0.3rem 0.6rem;
-                    border-radius: 0.75rem;
-                    font-weight: 600;
-                    font-size: 0.8rem;
-                    margin-left: 1rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: opacity 0.3s ease-in-out, background-color 0.3s ease;
-                    cursor: pointer;
-                    user-select: none;
-                }
-
-                .points-display:active {
-                    transform: scale(0.95);
-                }
-
-                .header-icons-left {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                }
-
-                main {
-                    padding: 2rem 1.25rem;
-                    padding-bottom: 80px;
-                    text-align: center;
-                    background-color: var(--background-color);
-                    min-height: calc(100vh - 70px - 50px);
-                    padding-top: calc(50px + 2rem);
-                    transition: background-color 0.3s ease;
-                    overflow-y: auto;
-                    -webkit-overflow-scrolling: touch;
-                }
-
-                main::-webkit-scrollbar {
-                    display: none;
-                }
-                main {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-
-                h1 {
-                    color: var(--primary-color);
-                    font-size: 2rem;
-                    font-weight: 600;
-                    margin-bottom: 1rem;
-                }
-
-                section {
-                    display: none;
-                }
-
-                section.active {
-                    display: block;
-                }
-
-                .bottom-nav {
-                    position: fixed;
-                    bottom: 0;
-                    width: 100%;
-                    height: 70px;
-                    background-color: var(--background-color);
-                    display: flex;
-                    justify-content: space-around;
-                    align-items: center;
-                    border-top: 1px solid var(--border-color);
-                    border-top-left-radius: 16px;
-                    border-top-right-radius: 16px;
-                    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
-                    z-index: 1000;
-                    transition: background-color 0.3s ease, border-top-color 0.3s ease;
-                }
-
-                .bottom-nav button {
-                    background: none;
-                    border: none;
-                    color: var(--inactive-color);
-                    font-size: 12px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    -webkit-tap-highlight-color: rgba(0,0,0,0);
-                    outline: none;
-                    padding: 6px 12px;
-                    position: relative;
-                    transition: all 0.1s ease;
-                }
-
-                .bottom-nav button:active {
-                    transform: scale(0.95);
-                }
-
-                .bottom-nav button.active {
-                    color: var(--primary-color);
-                }
-
-                .bottom-nav button .icon-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 6px 12px;
-                    border-radius: 0.5rem;
-                    transition: background-color 0.1s ease;
-                }
-
-                .bottom-nav button.active .icon-container {
-                    background-color: var(--active-bg);
-                }
-
-                .bottom-nav button svg {
-                    width: 24px;
-                    height: 24px;
-                    stroke: var(--inactive-color);
-                    fill: none;
-                    transition: color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
-                }
-
-                .bottom-nav button.active svg {
-                    fill: none;
-                    stroke: var(--icon-active-fill);
-                }
-
-                .bottom-nav button[onclick="showTab('exams')"].active svg,
-                .bottom-nav button[onclick="showTab('reviews')"].active svg {
-                    fill: var(--icon-active-fill);
-                    stroke: var(--icon-active-fill);
-                }
-
-                .bottom-nav button[onclick="showTab('exams')"].active svg path[stroke="white"],
-                .bottom-nav button[onclick="showTab('exams')"].active svg line[stroke="white"],
-                .bottom-nav button[onclick="showTab('exams')"].active svg polyline[stroke="white"],
-                .bottom-nav button[onclick="showTab('reviews')"].active svg path[stroke="white"],
-                .bottom-nav button[onclick="showTab('reviews')"].active svg line[stroke="white"],
-                .bottom-nav button[onclick="showTab('reviews')"].active svg polyline[stroke="white"] {
-                    stroke: white;
-                }
-
-                .bottom-nav button span {
-                    margin-top: 4px;
-                }
-
-                .home-cards-container {
-                    display: flex;
-                    gap: 1rem;
-                    justify-content: center;
-                    flex-wrap: nowrap;
-                }
-
-                .card {
-                    width: 40%;
-                    min-width: 120px;
-                    aspect-ratio: 1 / 1;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 8px var(--card-shadow);
-                    position: relative;
-                    padding: 1rem;
-                    text-align: right;
-                    cursor: pointer;
-                    transition: transform 0.1s ease-in-out, box-shadow 0.3s ease;
-                    user-select: none;
-                    -webkit-user-select: none;
-                    -moz-user-select: none;
-                }
-
-                .card:active {
-                    transform: scale(0.97);
-                }
-
-                .card-title {
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    color: white;
-                    position: absolute;
-                    top: 1rem;
-                    right: 1rem;
-                }
-
-                .card-description {
-                    font-size: 0.85rem;
-                    color: rgba(255, 255, 255, 0.8);
-                    position: absolute;
-                    top: 3.5rem;
-                    right: 1rem;
-                }
-
-                .card svg {
-                    position: absolute;
-                    bottom: 1rem;
-                    left: 1rem;
-                    width: 36px;
-                    height: 36px;
-                }
-
-                .store-card {
-                    background-color: #FFD700;
-                }
-
-                .summaries-card {
-                    background-color: #00A693;
-                }
-
-                .settings-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    background-color: var(--background-color);
-                    padding: 1rem 1.5rem;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                    transition: background-color 0.3s ease;
-                    margin-bottom: 1rem;
-                }
-
-                .settings-item span {
-                    font-size: 1rem;
-                    color: var(--text-color);
-                }
-
-                .switch {
-                    position: relative;
-                    display: inline-block;
-                    width: 50px;
-                    height: 28px;
-                }
-
-                .switch input {
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                }
-
-                .slider {
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background-color: #ccc;
-                    transition: .4s;
-                    border-radius: 28px;
-                }
-
-                .slider:before {
-                    position: absolute;
-                    content: "";
-                    height: 20px;
-                    width: 20px;
-                    left: 4px;
-                    bottom: 4px;
-                    background-color: white;
-                    transition: .4s;
-                    border-radius: 50%;
-                }
-
-                input:checked + .slider {
-                    background-color: var(--primary-color);
-                }
-
-                input:checked + .slider:before {
-                    transform: translateX(22px);
-                }
-
-                .more-menu-container {
-                    position: relative;
-                    cursor: pointer;
-                    margin-left: 1rem;
-                }
-
-                #more-menu-icon {
-                    width: 24px;
-                    height: 24px;
-                    color: var(--secondary-color);
-                    stroke: currentColor;
-                    fill: none;
-                    transition: transform 0.1s ease-in-out;
-                }
-
-                #more-menu-icon:active {
-                    transform: scale(0.9);
-                }
-
-                #more-menu-dropdown {
-                    display: none;
-                    position: absolute;
-                    top: 45px;
-                    right: auto;
-                    left: 0;
-                    min-width: 150px;
-                    background-color: var(--dropdown-bg);
-                    border: 1px solid var(--border-color);
-                    border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-                    z-index: 1001;
-                    padding: 8px 0;
-                    text-align: right;
-                }
-
-                #more-menu-dropdown.active {
-                    display: block;
-                }
-
-                .dropdown-item {
-                    display: block;
-                    padding: 10px 16px;
-                    color: var(--text-color);
-                    text-decoration: none;
-                    cursor: pointer;
-                    transition: background-color 0.2s ease;
-                }
-
-                .dropdown-item:active {
-                    background-color: var(--active-bg);
-                }
-
-                .subject-tabs-container {
-                    display: flex;
-                    overflow-x: auto;
-                    padding-bottom: 8px;
-                    margin-bottom: 1rem;
-                    gap: 8px;
-                    justify-content: flex-start;
-                    padding-right: 1.25rem;
-                    padding-left: 1.25rem;
-                    margin-right: -1.25rem;
-                    margin-left: -1.25rem;
-                }
-
-                .subject-tab {
-                    position: relative;
-                    flex-shrink: 0;
-                    width: 140px;
-                    height: 60px;
-                    padding: 0;
-                    border-radius: 12px;
-                    font-size: 1rem;
-                    font-weight: 500;
-                    text-align: center;
-                    cursor: pointer;
-                    user-select: none;
-                    -webkit-user-select: none;
-                    -moz-user-select: none;
-                    background-color: var(--background-color);
-                    color: var(--text-color);
-                    box-shadow: 0 2px 4px var(--card-shadow);
-                    transition: background-color 0.3s ease, color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    border: 1px solid var(--border-color);
-                }
-
-                .subject-tab:active {
-                    transform: scale(0.97);
-                }
-
-                .subject-tab.active {
-                    background-color: var(--primary-color);
-                    color: #ffffff;
-                    border-color: var(--primary-color);
-                }
-                .subject-tab.active .subject-icon-bg svg {
-                    fill: #ffffff;
-                }
-                .subject-tab .subject-icon-bg svg {
-                    fill: var(--inactive-color);
-                }
-                body.dark-mode .subject-tab .subject-icon-bg svg {
-                    fill: var(--secondary-color);
-                }
-
-                .subject-tab .subject-icon-bg {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    opacity: 0.08;
-                    transition: opacity 0.3s ease;
-                }
-
-                .subject-tab.active .subject-icon-bg {
-                    opacity: 0.15;
-                }
-
-                .subject-tab .subject-icon-bg svg {
-                    width: 60px;
-                    height: 60px;
-                    stroke: none;
-                }
-
-                .subject-tab span {
-                    position: relative;
-                    z-index: 1;
-                    padding: 0 16px;
-                    font-weight: 700;
-                }
-
-                .subject-content-area {
-                    background-color: var(--active-bg);
-                    padding: 1.5rem;
-                    border-radius: 8px;
-                    text-align: right;
-                    min-height: 150px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    overflow-x: hidden;
-                    position: relative;
-                }
-
-                @keyframes spin {
-                  0% { transform: rotate(0deg); }
-                  100% { transform: rotate(360deg); }
-                }
-
-                .animate-spin-infinite {
-                  animation: spin 1s linear infinite;
-                }
-
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-                .scrollbar-hide {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
-
-            <header id="header-bar">
-                <div className="header-icons-left">
-                    <svg id="back-arrow" onClick={() => showTab('home')} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-arrow-right" style={{ display: activeTab !== 'home' && !['exams', 'reviews'].includes(activeTab) ? 'block' : 'none' }}>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                    <div className="points-display" id="points-display" onClick={() => showTab('store')}></div>
-                </div>
-
-                <div className="more-menu-container" style={{ display: ['home', 'exams', 'reviews'].includes(activeTab) ? 'block' : 'none' }}>
-                    <svg id="more-menu-icon" onClick={toggleMoreMenu} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-more-vertical">
-                        <circle cx="12" cy="12" r="1"></circle>
-                        <circle cx="12" cy="5" r="1"></circle>
-                        <circle cx="12" cy="19" r="1"></circle>
-                    </svg>
-                    <div id="more-menu-dropdown" className="">
-                        <a className="dropdown-item" onClick={() => { showTab('profile'); toggleMoreMenu(); }}>الملف الشخصي</a>
-                        <a className="dropdown-item" onClick={() => { showTab('settings'); toggleMoreMenu(); }}>الإعدادات</a>
-                        <a className="dropdown-item" onClick={() => { showTab('notifications'); toggleMoreMenu(); }}>الإشعارات</a>
-                    </div>
-                </div>
-            </header>
-
-            {message && (
-                <div style={{
-                    position: 'fixed',
-                    top: '60px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontFamily: "'Cairo', sans-serif",
-                    fontSize: '0.9rem',
-                    zIndex: 10000,
-                    opacity: 1, // Controlled by state
-                    transition: 'opacity 0.5s ease-in-out',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    backgroundColor: messageType === 'success' ? '#28a745' : '#dc3545'
-                }}>
-                    {message}
-                </div>
-            )}
-
-            <main>
-                <section id="home" className={activeTab === 'home' ? 'active' : ''}>
-                    <div className="home-cards-container">
-                        <a className="card summaries-card" onClick={() => showTab('summaries')}>
-                            <h2 className="card-title">الملخصات</h2>
-                            <p className="card-description">جميع ملخصات المواد بملحقاتها</p>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                                <line x1="10" y1="6" x2="16" y2="6"></line>
-                                <line x1="10" y1="10" x2="16" y2="10"></line>
-                                <line x1="10" y1="14" x2="16" y2="14"></line>
-                            </svg>
-                        </a>
-                        <a className="card store-card" onClick={() => showTab('store')}>
-                            <h2 className="card-title">المتجر</h2>
-                            <p className="card-description">تقدر ستبدل النقاط هنا</p>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="9" cy="21" r="1"></circle>
-                                <circle cx="20" cy="21" r="1"></circle>
-                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                            </svg>
-                        </a>
-                    </div>
-                </section>
-
-                <section id="exams" className={activeTab === 'exams' ? 'active' : ''}>
-                    <h1>أهلاً في صفحة الاختبارات</h1>
-                </section>
-
-                <section id="reviews" className={activeTab === 'reviews' ? 'active' : ''}>
-                    <h1>أهلاً في صفحة التقييمات</h1>
-                </section>
-
-                <section id="profile" className={activeTab === 'profile' ? 'active' : ''}>
-                    <h1 style={{ marginBottom: '2rem' }}>الملف الشخصي</h1>
-                    <div id="profile-content-area" style={{ backgroundColor: 'var(--active-bg)', padding: '1.5rem', borderRadius: '8px', textAlign: 'center', minHeight: '150px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 8px var(--card-shadow)' }}>
-                        {renderProfileUI()}
-                    </div>
-                </section>
-
-                <section id="store" className={activeTab === 'store' ? 'active' : ''}>
-                    <h1>أهلاً في المتجر</h1>
-                    <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6', marginTop: '1rem' }}>هنا ستجد المنتجات المتاحة للشراء باستخدام النقاط.</p>
-                    <button onClick={() => addPoints(10)} style={{ marginTop: '2rem', padding: '10px 20px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                        إضافة 10 نقاط (للتجربة)
-                    </button>
-                </section>
-
-                <section id="summaries" className={activeTab === 'summaries' ? 'active' : ''}>
-                    <div className="subject-tabs-container scrollbar-hide">
-                        <button className={`subject-tab ${document.getElementById('arabic-content')?.style.display !== 'none' ? 'active' : ''}`} onClick={() => showSubjectContent('arabic')}>
-                            <div className="subject-icon-bg">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 18H5V8h14v10zm-1-9H6v8h12V9zm-1-6H6c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 10h6v2H9v-2zm0 3h6v2H9v-2z" />
-                                </svg>
-                            </div>
-                            <span>اللغة العربية</span>
-                        </button>
-                        <button className={`subject-tab ${document.getElementById('english-content')?.style.display !== 'none' ? 'active' : ''}`} onClick={() => showSubjectContent('english')}>
-                            <div className="subject-icon-bg">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86zm2 0V4.07c3.95.49 7 3.85 7 7.93s-3.05 7.44-7 7.93z" />
-                                </svg>
-                            </div>
-                            <span>اللغة الإنجليزية</span>
-                        </button>
-                        <button className={`subject-tab ${document.getElementById('physics-content')?.style.display !== 'none' ? 'active' : ''}`} onClick={() => showSubjectContent('physics')}>
-                            <div className="subject-icon-bg">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/>
-                                </svg>
-                            </div>
-                            <span>فيزيا</span>
-                        </button>
-                        <button className={`subject-tab ${document.getElementById('chemistry-content')?.style.display !== 'none' ? 'active' : ''}`} onClick={() => showSubjectContent('chemistry')}>
-                            <div className="subject-icon-bg">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-6c-1.1 0-2 .9-2 2v5c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V9c0-1.1-.9-2-2-2zm-2 4h-3V9h3v2zM1 1v22h22V1H1zm20 20H3V3h18v18z" />
-                                </svg>
-                            </div>
-                            <span>كيميا</span>
-                        </button>
-                        <button className={`subject-tab ${document.getElementById('pure-math-content')?.style.display !== 'none' ? 'active' : ''}`} onClick={() => showSubjectContent('pure-math')}>
-                            <div className="subject-icon-bg">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-                                </svg>
-                            </div>
-                            <span>البحتة</span>
-                        </button>
-                        <button className={`subject-tab ${document.getElementById('applied-math-content')?.style.display !== 'none' ? 'active' : ''}`} onClick={() => showSubjectContent('applied-math')}>
-                            <div className="subject-icon-bg">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
-                                </svg>
-                            </div>
-                            <span>التطبيقية</span>
-                        </button>
-                        <button className={`subject-tab ${document.getElementById('history-content')?.style.display !== 'none' ? 'active' : ''}`} onClick={() => showSubjectContent('history')}>
-                            <div className="subject-icon-bg">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 4H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-1 16H6V6h12v14zM9 8h6v2H9V8zm0 3h6v2H9v-2zm0 3h4v2H9v-2z"/>
-                                </svg>
-                            </div>
-                            <span>التاريخ</span>
-                        </button>
-                    </div>
-
-                    <div className="subject-content-area" id="subject-content-area">
-                        <div id="arabic-content" className={document.getElementById('arabic-content')?.style.display !== 'none' ? 'subject-content active' : 'subject-content'}>
-                            <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6' }}>ملخصات مادة اللغة العربية تشمل النحو، الصرف، البلاغة، والأدب. يتم التركيز على قواعد الإعراب، تصريف الأفعال، فنون البلاغة مثل التشبيه والاستعارة، وتحليل النصوص الأدبية.</p>
-                        </div>
-                        <div id="english-content" className={document.getElementById('english-content')?.style.display !== 'none' ? 'subject-content active' : 'subject-content'} style={{ display: 'none' }}>
-                            <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6' }}>ملخصات مادة اللغة الإنجليزية تغطي القواعد، المفردات، ومهارات الكتابة. تشمل القواعد الأساسية، بناء الجمل، توسيع المفردات، وكتابة المقالات والرسائل.</p>
-                        </div>
-                        <div id="physics-content" className={document.getElementById('physics-content')?.style.display !== 'none' ? 'subject-content active' : 'subject-content'} style={{ display: 'none' }}>
-                            <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6' }}>ملخصات مادة الفيزياء تركز على قوانين الحركة، الطاقة، الكهرباء، والمغناطيسية. تتناول المفاهيم الأساسية مثل القوة، الشغل، القدرة، والدوائر الكهربائية.</p>
-                        </div>
-                        <div id="chemistry-content" className={document.getElementById('chemistry-content')?.style.display !== 'none' ? 'subject-content active' : 'subject-content'} style={{ display: 'none' }}>
-                            <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6' }}>ملخصات مادة الكيمياء تشمل بنية الذرة، الجدول الدوري، أنواع الروابط الكيميائية، والتفاعلات الكيميائية الأساسية. يتم التركيز على الأحماض والقواعد، والأكسدة والاختزال.</p>
-                        </div>
-                        <div id="pure-math-content" className={document.getElementById('pure-math-content')?.style.display !== 'none' ? 'subject-content active' : 'subject-content'} style={{ display: 'none' }}>
-                            <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6' }}>ملخصات مادة البحتة تركز على الجبر والهندسة التحليلية وحساب التفاضل والتكامل. تتناول المفاهيم الرياضية المجردة وتطبيقاتها النظرية.</p>
-                        </div>
-                        <div id="applied-math-content" className={document.getElementById('applied-math-content')?.style.display !== 'none' ? 'subject-content active' : 'subject-content'} style={{ display: 'none' }}>
-                            <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6' }}>ملخصات مادة التطبيقية تشمل الميكانيكا والإحصاء والاحتمالات. تركز على تطبيق المفاهيم الرياضية لحل المشكلات الواقعية.</p>
-                        </div>
-                        <div id="history-content" className={document.getElementById('history-content')?.style.display !== 'none' ? 'subject-content active' : 'subject-content'} style={{ display: 'none' }}>
-                            <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', lineHeight: '1.6' }}>ملخصات مادة التاريخ تغطي الفترات التاريخية الهامة، الأحداث الرئيسية، والشخصيات المؤثرة. تركز على فهم التطورات الحضارية والسياسية.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="settings" className={activeTab === 'settings' ? 'active' : ''}>
-                    <h1 style={{ marginBottom: '2rem' }}>الإعدادات</h1>
-                    <div className="settings-item">
-                        <span>الوضع الداكن</span>
-                        <label className="switch">
-                            <input type="checkbox" id="dark-mode-toggle" onChange={(e) => {
-                                if (e.target.checked) {
-                                    document.body.classList.add('dark-mode');
-                                    localStorage.setItem('darkMode', 'enabled');
-                                    setIsDarkMode(true);
-                                } else {
-                                    document.body.classList.remove('dark-mode');
-                                    localStorage.setItem('darkMode', 'disabled');
-                                    setIsDarkMode(false);
-                                }
-                            }} />
-                            <span className="slider"></span>
-                        </label>
-                    </div>
-                    <div className="settings-item" id="install-app-item" style={{ display: 'none' }}>
-                        <span>تثبيت التطبيق</span>
-                        <button onClick={installApp} id="install-button-emoji" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span id="install-emoji" style={{ fontSize: '24px', transition: 'transform 0.3s ease' }}>📥</span>
-                        </button>
-                    </div>
-                </section>
-
-                <section id="notifications" className={activeTab === 'notifications' ? 'active' : ''}>
-                    <h1>أهلاً في صفحة الإشعارات</h1>
-                </section>
-            </main>
-
-            <nav className="bottom-nav" style={{ display: ['home', 'exams', 'reviews'].includes(activeTab) ? 'flex' : 'none' }}>
-                <button onClick={() => showTab('home')} className={activeTab === 'home' ? 'active' : ''}>
-                    <div className="icon-container">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                            <path d="M9 22V12h6v10"></path>
-                        </svg>
-                    </div>
-                    <span>الرئيسية</span>
-                </button>
-                <button onClick={() => showTab('exams')} className={activeTab === 'exams' ? 'active' : ''}>
-                    <div className="icon-container">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="currentColor"></path>
-                            <polyline points="14 2 14 8 20 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></line>
-                            <line x1="16" y1="17" x2="8" y2="17" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></line>
-                            <line x1="10" y1="9" x2="8" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></line>
-                        </svg>
-                    </div>
-                    <span>اختبارات</span>
-                </button>
-                <button onClick={() => showTab('reviews')} className={activeTab === 'reviews' ? 'active' : ''}>
-                    <div className="icon-container">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" fill="currentColor"></path>
-                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" fill="currentColor"></path>
-                            <path d="M12 3v18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path>
-                            <path d="M7 7h-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path>
-                            <path d="M17 7h5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path>
-                        </svg>
-                    </div>
-                    <span>التقييمات</span>
-                </button>
-            </nav>
-        </div>
-    );
-}
-
-export default App;
+            if (darkModeToggle) {
+                darkModeToggle.addEventListener('change', () => {
+                    if (darkModeToggle.checked) {
+                        document.body.classList.add('dark-mode');
+                        localStorage.setItem('darkMode', 'enabled');
+                    } else {
+                        document.body.classList.remove('dark-mode');
+                        localStorage.setItem('darkMode', 'disabled');
+                    }
+                });
+            }
+
+            const subjectContentArea = document.getElementById('subject-content-area');
+            if (subjectContentArea) {
+                subjectContentArea.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                });
+
+                subjectContentArea.addEventListener('touchmove', (e) => {
+                    endX = e.touches[0].clientX;
+                });
+
+                subjectContentArea.addEventListener('touchend', () => {
+                    const diffX = startX - endX;
+                    const subjectContents = Array.from(document.querySelectorAll('.subject-content'));
+                    const subjectIds = subjectContents.map(content => content.id.replace('-content', ''));
+                    const activeSubjectContent = document.querySelector('.subject-content.active');
+                    if (!activeSubjectContent) return;
+                    const currentSubjectId = activeSubjectContent.id.replace('-content', '');
+                    const currentIndex = subjectIds.indexOf(currentSubjectId);
+
+                    if (Math.abs(diffX) > swipeThreshold) {
+                        if (diffX > 0) {
+                            const nextIndex = (currentIndex + 1) % subjectIds.length;
+                            showSubjectContent(subjectIds[nextIndex]);
+                        } else {
+                            const prevIndex = (currentIndex - 1 + subjectIds.length) % subjectIds.length;
+                            showSubjectContent(subjectIds[prevIndex]);
+                        }
+                    }
+                    startX = 0;
+                    endX = 0;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
