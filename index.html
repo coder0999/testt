@@ -4,6 +4,8 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>موقعي</title>
+    <!-- Link to your manifest.json for PWA installation -->
+    <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --primary-color: #007bff;
@@ -17,14 +19,6 @@
             --card-shadow: rgba(0, 0, 0, 0.08);
             --dropdown-bg: #ffffff;
             --dropdown-item-hover: #f1f3f5;
-
-            /* New variables for unified blue subject tabs */
-            --subject-tab-bg-inactive: #e0f2ff; /* Very light blue */
-            --subject-tab-text-inactive: #0056b3; /* Darker blue for text on inactive tab */
-            --subject-tab-bg-active: var(--primary-color); /* Primary blue for active tab */
-            --subject-tab-text-active: #ffffff; /* White for text on active tab */
-            --subject-tab-icon-inactive: #0056b3; /* Darker blue for icon on inactive tab */
-            --subject-tab-icon-active: #ffffff; /* White for icon on active tab */
         }
 
         body.dark-mode {
@@ -39,14 +33,6 @@
             --card-shadow: rgba(0, 0, 0, 0.3);
             --dropdown-bg: #1e1e1e;
             --dropdown-item-hover: #2d2d2d;
-
-            /* Dark mode for unified blue subject tabs */
-            --subject-tab-bg-inactive: #1a365d; /* Darker blue for dark mode inactive */
-            --subject-tab-text-inactive: #90caf9; /* Lighter blue for dark mode inactive text */
-            --subject-tab-bg-active: var(--primary-color); /* Primary blue for dark mode active */
-            --subject-tab-text-active: #ffffff; /* White for dark mode active text */
-            --subject-tab-icon-inactive: #90caf9; /* Lighter blue for dark mode inactive icon */
-            --subject-tab-icon-active: #ffffff; /* White for dark mode active icon */
         }
 
         body {
@@ -60,7 +46,18 @@
             color: var(--text-color);
             font-size: 16px;
             transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-y: auto; /* Allow vertical scrolling for main content */
         }
+
+        /* Hide browser scrollbar globally */
+        body::-webkit-scrollbar {
+            display: none;
+        }
+        body {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
 
         #header-bar {
             display: flex;
@@ -119,6 +116,17 @@
             min-height: calc(100vh - 70px - 50px);
             padding-top: calc(50px + 2rem);
             transition: background-color 0.3s ease;
+            overflow-y: auto; /* Ensure main content can scroll */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+
+        /* Hide main content scrollbar if it appears */
+        main::-webkit-scrollbar {
+            display: none;
+        }
+        main {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
         }
 
         h1 {
@@ -294,6 +302,7 @@
             border-radius: 12px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             transition: background-color 0.3s ease;
+            margin-bottom: 1rem; /* Added margin for spacing */
         }
 
         .settings-item span {
@@ -421,7 +430,7 @@
             width: 140px; /* Fixed width for consistent size on mobile */
             height: 60px; /* Fixed height for consistent size */
             padding: 0; /* Padding handled by internal elements */
-            border-radius: 9999px; /* Full rounded corners */
+            border-radius: 12px; /* Rounded corners like the settings item */
             font-size: 1rem;
             font-weight: 500;
             text-align: center;
@@ -429,30 +438,36 @@
             user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
-            background-color: var(--subject-tab-bg-inactive);
-            color: var(--subject-tab-text-inactive);
-            transition: background-color 0.3s ease, color 0.3s ease, transform 0.1s ease;
+            background-color: var(--background-color); /* Unified background like settings item */
+            color: var(--text-color); /* Default text color */
+            box-shadow: 0 2px 4px var(--card-shadow); /* Subtle shadow for all tabs */
+            transition: background-color 0.3s ease, color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
             overflow: hidden; /* Hide overflow for SVG background */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            border: 1px solid var(--border-color); /* Border like the settings item */
         }
 
         .subject-tab:active {
             transform: scale(0.97);
         }
 
-        /* Active state for all tabs - text and icon color */
+        /* Active state for all tabs */
         .subject-tab.active {
-            background-color: var(--subject-tab-bg-active);
-            color: var(--subject-tab-text-active);
+            background-color: var(--primary-color); /* Primary blue for active tab */
+            color: #ffffff; /* White text when active */
+            border-color: var(--primary-color); /* Active border color */
         }
         .subject-tab.active .subject-icon-bg svg {
-            fill: var(--subject-tab-icon-active); /* Icon color is white when active */
+            fill: #ffffff; /* White icon when active */
         }
         .subject-tab .subject-icon-bg svg {
-            fill: var(--subject-tab-icon-inactive); /* Icon color inherits from inactive text */
+            fill: var(--inactive-color); /* Inactive icon color */
+        }
+        body.dark-mode .subject-tab .subject-icon-bg svg {
+            fill: var(--secondary-color); /* Dark mode inactive icon color */
         }
 
 
@@ -473,7 +488,6 @@
         .subject-tab .subject-icon-bg svg {
             width: 60px; /* Larger SVG for background */
             height: 60px;
-            /* fill: currentColor; Removed, now uses specific var */
             stroke: none;
         }
 
@@ -483,17 +497,26 @@
             padding: 0 16px; /* Add padding to text itself */
         }
 
-        /* Remove border from subject content area */
+        /* Removed border from subject content area */
         .subject-content-area {
             background-color: var(--active-bg);
             padding: 1.5rem;
             border-radius: 8px;
-            /* Removed border: 1px solid var(--border-color); */
             text-align: right;
             min-height: 150px;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* Keyframes for spin animation */
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .animate-spin-infinite {
+          animation: spin 1s linear infinite; /* Continuous spin */
         }
 
         /* Custom Scrollbar Hide */
@@ -578,7 +601,7 @@
         </section>
 
         <section id="summaries" class="">
-            <h1>ملخصات المواد</h1>
+            <!-- Removed <h1>ملخصات المواد</h1> -->
             <!-- Horizontal Subject Tabs -->
             <div class="subject-tabs-container scrollbar-hide">
                 <button class="subject-tab" onclick="showSubjectContent('arabic')">
@@ -641,6 +664,12 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="settings-item" id="install-app-item" style="display: none;">
+                <span>تثبيت التطبيق</span>
+                <button onclick="installApp()" id="install-button-emoji" style="background: none; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <span id="install-emoji" style="font-size: 24px; transition: transform 0.3s ease;">📥</span>
+                </button>
+            </div>
         </section>
 
         <section id="notifications">
@@ -687,6 +716,7 @@
     <script>
         // Global variable for points (placeholder for future backend integration)
         let currentPoints = 8; // Initial points
+        let deferredPrompt; // To store the beforeinstallprompt event
 
         // Function to update the displayed points
         function updatePointsDisplay() {
@@ -780,6 +810,81 @@
             if (contentToShow) {
                 contentToShow.style.display = 'block';
             }
+        }
+
+        // PWA Installation Logic
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            // Update UI to notify the user they can add to home screen
+            const installAppItem = document.getElementById('install-app-item');
+            if (installAppItem) {
+                installAppItem.style.display = 'flex'; // Show the install option
+            }
+            console.log('beforeinstallprompt event fired.');
+        });
+
+        async function installApp() {
+            const installEmojiSpan = document.getElementById('install-emoji');
+            if (installEmojiSpan) {
+                installEmojiSpan.textContent = '🔄'; // Spinner emoji
+                installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
+
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        console.log('User accepted the A2HS prompt');
+                        installEmojiSpan.textContent = '✅'; // Checkmark
+                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
+                        const installAppItem = document.getElementById('install-app-item');
+                        if (installAppItem) {
+                            installAppItem.style.display = 'none'; // Hide the button
+                        }
+                    } else {
+                        console.log('User dismissed the A2HS prompt');
+                        installEmojiSpan.textContent = '📥'; // Revert to download emoji
+                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
+                    }
+                    deferredPrompt = null; // Clear the deferredPrompt
+                } else {
+                    // PWA not available or already installed/dismissed
+                    console.log('PWA installation prompt not available or already shown.');
+                    installEmojiSpan.textContent = '❌'; // Indicate failure or not available
+                    installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
+                    // If it's not available, it should probably be hidden
+                    const installAppItem = document.getElementById('install-app-item');
+                    if (installAppItem) {
+                        installAppItem.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('appinstalled', () => {
+            // App was installed
+            console.log('PWA was installed');
+            // Hide the install button if the app is already installed
+            const installAppItem = document.getElementById('install-app-item');
+            if (installAppItem) {
+                installAppItem.style.display = 'none';
+            }
+        });
+
+
+        // Register Service Worker (for PWA functionality)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('Service Worker registration failed: ', registrationError);
+                    });
+            });
         }
 
 
