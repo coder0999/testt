@@ -6,6 +6,8 @@
     <title>موقعي</title>
     <!-- Link to your manifest.json for PWA installation -->
     <link rel="manifest" href="manifest.json">
+    <!-- Google Font: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #007bff;
@@ -39,7 +41,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: 'Cairo', sans-serif; /* Changed font to Cairo */
             background: var(--background-color);
             direction: rtl;
             -webkit-tap-highlight-color: transparent;
@@ -495,6 +497,7 @@
             position: relative; /* Ensure text is above SVG */
             z-index: 1;
             padding: 0 16px; /* Add padding to text itself */
+            font-weight: 700; /* Made font bolder (700 for Cairo) */
         }
 
         /* Removed border from subject content area */
@@ -601,7 +604,6 @@
         </section>
 
         <section id="summaries" class="">
-            <!-- Removed <h1>ملخصات المواد</h1> -->
             <!-- Horizontal Subject Tabs -->
             <div class="subject-tabs-container scrollbar-hide">
                 <button class="subject-tab" onclick="showSubjectContent('arabic')">
@@ -636,6 +638,30 @@
                     </div>
                     <span>كيميا</span>
                 </button>
+                <button class="subject-tab" onclick="showSubjectContent('pure-math')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                        </svg>
+                    </div>
+                    <span>البحتة</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('applied-math')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                        </svg>
+                    </div>
+                    <span>التطبيقية</span>
+                </button>
+                <button class="subject-tab" onclick="showSubjectContent('history')">
+                    <div class="subject-icon-bg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 4H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-1 16H6V6h12v14zM9 8h6v2H9V8zm0 3h6v2H9v-2zm0 3h4v2H9v-2z"/>
+                        </svg>
+                    </div>
+                    <span>التاريخ</span>
+                </button>
             </div>
 
             <!-- Subject Content Area -->
@@ -651,6 +677,15 @@
                 </div>
                 <div id="chemistry-content" class="subject-content" style="display: none;">
                     <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة الكيمياء تشمل بنية الذرة، الجدول الدوري، أنواع الروابط الكيميائية، والتفاعلات الكيميائية الأساسية. يتم التركيز على الأحماض والقواعد، والأكسدة والاختزال.</p>
+                </div>
+                <div id="pure-math-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة البحتة تركز على الجبر والهندسة التحليلية وحساب التفاضل والتكامل. تتناول المفاهيم الرياضية المجردة وتطبيقاتها النظرية.</p>
+                </div>
+                <div id="applied-math-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة التطبيقية تشمل الميكانيكا والإحصاء والاحتمالات. تركز على تطبيق المفاهيم الرياضية لحل المشكلات الواقعية.</p>
+                </div>
+                <div id="history-content" class="subject-content" style="display: none;">
+                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة التاريخ تغطي الفترات التاريخية الهامة، الأحداث الرئيسية، والشخصيات المؤثرة. تركز على فهم التطورات الحضارية والسياسية.</p>
                 </div>
             </div>
         </section>
