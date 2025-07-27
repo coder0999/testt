@@ -775,6 +775,10 @@
             padding-top: 2rem; /* Adjusted padding for content */
             padding-bottom: 2rem;
             box-sizing: border-box; /* Include padding in height calculation */
+            max-width: 800px; /* Default max-width for larger screens */
+            margin: 0 auto;
+            text-align: right;
+            width: 100%; /* Allow it to expand */
         }
 
         /* Ensure main content background is white when exam-taking-section is active */
@@ -1586,8 +1590,27 @@
             transform: scale(0.98);
         }
 
-        /* No specific media queries for font sizes or card padding,
-           as they are now set to be consistent across all devices. */
+        /* Media query for smaller screens (mobile) */
+        @media (max-width: 768px) {
+            /* Override main's padding for exam-taking-section to allow it to be wider */
+            main:has(#exam-taking-section.active) {
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            #exam-taking-section {
+                padding-left: 0.5rem; /* Small padding on left */
+                padding-right: 0.5rem; /* Small padding on right */
+                max-width: 100%; /* Ensure it spans full width */
+            }
+
+            .exam-question-card {
+                width: calc(100% - 1rem); /* 100% of parent width minus 0.5rem padding on each side of parent */
+                margin-left: 0.5rem; /* Align with section padding */
+                margin-right: 0.5rem; /* Align with section padding */
+                box-sizing: border-box; /* Include padding in width calculation */
+            }
+        }
     </style>
 </head>
 <body class="">
