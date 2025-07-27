@@ -64,6 +64,7 @@
         let examTimerInterval = null;
         let examDurationSeconds = 0;
         let examStartTime = 0;
+        let oneMinuteWarningShown = false; // Flag to ensure warning is shown only once
 
         // Global variable to store completed exam IDs
         let completedExamsSet = new Set();
@@ -428,6 +429,10 @@
             submitExamButton.style.display = 'none';
             examResultsElement.innerHTML = ''; // Clear previous results
 
+            // Reset the one-minute warning flag for a new exam
+            oneMinuteWarningShown = false;
+            examTimerElement.classList.remove('timer-warning'); // Ensure timer is not red initially
+
             try {
                 const examDocRef = doc(window.firebaseDb, `artifacts/${appId}/public/data/exams`, examId);
                 const docSnap = await getDoc(examDocRef);
@@ -440,7 +445,8 @@
                     renderExamQuestions(currentExamData.questions);
                     startTimer(currentExamData.duration); // Duration in minutes
                     submitExamButton.style.display = 'block';
-                    submitExamButton.onclick = submitExam; // Attach submit handler
+                    // Pass a flag to submitExam to indicate manual submission
+                    submitExamButton.onclick = () => submitExam('manual');
 
                 } else {
                     showMessageBox('الامتحان غير موجود.', 'error');
@@ -492,17 +498,30 @@
                 if (remainingTime <= 0) {
                     clearInterval(examTimerInterval);
                     examTimerElement.textContent = 'انتهى الوقت!';
-                    submitExam(true); // Submit automatically when time runs out
+                    examTimerElement.classList.remove('timer-warning'); // Remove warning color
+                    submitExam('timeUp'); // Submit automatically when time runs out
                     return;
                 }
 
                 const minutes = Math.floor(remainingTime / 60);
                 const seconds = remainingTime % 60;
                 examTimerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                // Change timer color to red and show warning for the last minute
+                if (remainingTime <= 60) {
+                    examTimerElement.classList.add('timer-warning');
+                    if (remainingTime === 60 && !oneMinuteWarningShown) {
+                        showMessageBox('تبقى دقيقة واحدة!', 'info');
+                        oneMinuteWarningShown = true; // Set flag to true to prevent repeated warnings
+                    }
+                } else {
+                    examTimerElement.classList.remove('timer-warning'); // Ensure color is normal if over 1 minute
+                }
+
             }, 1000);
         }
 
-        async function submitExam(timeUp = false) {
+        async function submitExam(submissionType = 'manual') { // Added submissionType parameter
             if (examTimerInterval) {
                 clearInterval(examTimerInterval);
             }
@@ -527,7 +546,7 @@
                 }
             });
 
-            if (!allAnswered && !timeUp) {
+            if (!allAnswered && submissionType === 'manual') { // Only check for manual submission
                 showMessageBox('الرجاء إنهاء جميع الأسئلة قبل التسليم!', 'error');
                 submitButton.disabled = false;
                 submitButton.textContent = 'إرسال الامتحان';
@@ -573,8 +592,8 @@
             }
 
             // 3. Display results and review
-            // Pass currentUserId to displayExamResults to handle conditional display of points
-            displayExamResults(currentExamData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp, window.currentUserId);
+            // Pass currentUserId and submissionType to displayExamResults to handle conditional display of points and messages
+            displayExamResults(currentExamData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, window.currentUserId);
 
             // Hide questions and submit button
             questionsDisplayContainer.style.display = 'none';
@@ -586,9 +605,17 @@
             submitButton.textContent = 'إرسال الامتحان'; // Reset button text
         }
 
-        function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp, userId) {
+        function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, userId) {
             const examResultsElement = document.getElementById('exam-results');
             let pointsHtml = '';
+            let submissionMessage = '';
+
+            if (submissionType === 'timeUp') {
+                submissionMessage = '<p class="exam-submission-message">انتهى الوقت، تم إرسال إجاباتك تلقائيًا.</p>';
+            } else if (submissionType === 'manual') {
+                submissionMessage = '<p class="exam-submission-message">تم التسليم بنجاح!</p>';
+            }
+
 
             if (userId) {
                 pointsHtml = `<p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>`;
@@ -603,11 +630,11 @@
             }
 
             examResultsElement.innerHTML = `
+                ${submissionMessage}
                 <h2 class="exam-result-title">نتيجتك:</h2>
                 <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
                 <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
                 ${pointsHtml}
-                ${timeUp ? '<p class="exam-result-time-up">انتهى الوقت، تم إرسال إجاباتك تلقائيًا.</p>' : ''}
                 <div class="exam-review-container">
                     <h3>مراجعة الامتحان:</h3>
                 </div>
@@ -1334,9 +1361,17 @@
             background-color: var(--active-bg);
             padding: 0.3rem 0.6rem;
             border-radius: 0.75rem;
-            display: none; /* Hidden by default, controlled by JS */
+            display: flex; /* Changed from none to flex for visibility */
+            align-items: center; /* Center content vertically */
+            justify-content: center; /* Center content horizontally */
             transition: background-color 0.3s ease, color 0.3s ease;
         }
+
+        .exam-timer-display.timer-warning {
+            color: var(--incorrect-answer-border); /* Red color for warning */
+            font-weight: 700; /* Make it bolder */
+        }
+
 
         .exam-question-card {
             background-color: var(--background-color);
@@ -1434,6 +1469,13 @@
             font-size: 1.2rem;
             color: var(--text-color);
             margin-bottom: 0.75rem;
+        }
+
+        .exam-submission-message {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
         }
 
         .exam-review-container {
