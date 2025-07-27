@@ -488,7 +488,8 @@
                 optionsContainer.addEventListener('click', (event) => {
                     const clickedRadio = event.target.closest('input[type="radio"]');
                     if (clickedRadio) {
-                        const questionIndex = parseInt(clickedRadio.dataset.question-index);
+                        // Corrected: Use dataset.questionIndex (camelCase)
+                        const questionIndex = parseInt(clickedRadio.dataset.questionIndex);
                         const selectedOptionIndex = parseInt(clickedRadio.value);
 
                         // If the clicked radio was already checked and is now being clicked again, deselect it
@@ -767,21 +768,21 @@
             scrollbar-width: none;  /* Firefox */
         }
 
-        /* Set background for exam-taking-section to light blue */
+        /* Set background for exam-taking-section to white */
         #exam-taking-section {
-            background-color: var(--active-bg); /* Light blue background for the entire section */
+            background-color: var(--background-color); /* Changed to white */
             min-height: calc(100vh - 50px); /* Fill remaining height */
             padding-top: 2rem; /* Adjusted padding for content */
             padding-bottom: 2rem;
             box-sizing: border-box; /* Include padding in height calculation */
         }
 
-        /* Ensure main content background is light blue when exam-taking-section is active */
+        /* Ensure main content background is white when exam-taking-section is active */
         main {
             background-color: var(--background-color); /* Default background */
         }
         main:has(#exam-taking-section.active) {
-            background-color: var(--active-bg); /* Override main background when exam section is active */
+            background-color: var(--background-color); /* Override main background to white when exam section is active */
         }
 
 
@@ -1626,7 +1627,7 @@
                     <p class="card-description">جميع ملخصات المواد بملحقاتها</p>
                     <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                        <path d="M6.5 2H20v20H6.5A2.5 2 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2 0 0 1 4 19.5v-15A2.5 2 0 0 1 6.5 2z"></path>
                         <line x1="10" y1="6" x2="16" y2="6"></line>
                         <line x1="10" y1="10" x2="16" y2="10"></line>
                         <line x1="10" y1="14" x2="16" y2="14"></line>
@@ -1917,13 +1918,11 @@
                 // When navigating back to exams, clear exam-taking section content
                 const questionsDisplayContainer = document.getElementById('questions-display-container');
                 const submitExamButton = document.getElementById('submit-exam-button');
-                // const examResultsElement = document.getElementById('exam-results'); // This element is removed
                 const examTimerElement = document.getElementById('exam-timer');
                 const examTitleElement = document.getElementById('exam-taking-title');
 
                 questionsDisplayContainer.innerHTML = '';
                 submitExamButton.style.display = 'none';
-                // examResultsElement.innerHTML = ''; // This line is no longer needed
                 examTimerElement.textContent = '';
                 examTitleElement.textContent = '';
                 // Ensure timer is hidden when returning to exams list
