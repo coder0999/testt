@@ -410,10 +410,8 @@
                 showMessageBox('خطأ: لم يتم تهيئة قاعدة البيانات.', 'error');
                 return;
             }
-            if (!window.currentUserId) {
-                showMessageBox('الرجاء تسجيل الدخول لبدء الامتحان.', 'error');
-                return;
-            }
+            // Removed the window.currentUserId check here to allow non-logged-in users to start exams.
+            // Point handling for non-logged-in users is managed in submitExam.
 
             // Hide all sections and show exam taking section
             showTab('exam-taking-section'); // This will handle hiding other sections
