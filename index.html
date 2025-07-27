@@ -1506,6 +1506,7 @@
             min-height: calc(100vh - 50px - 2rem - 2rem); /* Header + top/bottom padding */
             /* Adjusted to account for the header bar and padding */
             padding-top: 1.5rem; /* Add some top padding */
+            width: 100%; /* Ensure it takes full width for centering child elements */
         }
 
         .exam-review-container {
@@ -1947,35 +1948,34 @@
             const moreMenuContainer = document.querySelector('.more-menu-container');
             const examTimerElement = document.getElementById('exam-timer');
 
-            // Reset header bar alignment
-            headerBar.style.justifyContent = 'space-between'; // Default to space-between
+            // Always reset header bar to default layout first
+            headerBar.style.justifyContent = 'space-between'; // Default layout for header
+            pointsDisplay.style.display = 'flex'; // Default visible
+            moreMenuContainer.style.display = 'block'; // Default visible
+            examTimerElement.style.display = 'none'; // Default hidden
+            backArrow.style.display = 'none'; // Default hidden
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
             if (isChildPage) {
-                navBar.style.display = 'none';
-                backArrow.style.display = 'block'; // Show back arrow
+                navBar.style.display = 'none'; // Hide bottom nav for child pages
+                backArrow.style.display = 'block'; // Show back arrow for all child pages
+                pointsDisplay.style.display = 'none'; // Hide points for all child pages
+                moreMenuContainer.style.display = 'none'; // Hide more menu for all child pages
 
                 if (id === 'exam-taking-section') {
-                    pointsDisplay.style.display = 'none'; // Hide points
-                    moreMenuContainer.style.display = 'none'; // Hide more menu
-                    examTimerElement.style.display = 'flex'; // Show timer
-                    // headerBar.style.justifyContent remains 'space-between' for timer alignment
+                    examTimerElement.style.display = 'flex'; // Show timer only for exam
+                    // headerBar.style.justifyContent remains 'space-between' (default)
+                    // This will put back arrow on right, timer in middle, and empty space on left
                 } else {
                     // For other child pages (profile, settings, store, summaries, notifications)
-                    pointsDisplay.style.display = 'none'; // Hide points
-                    moreMenuContainer.style.display = 'none'; // Hide more menu
-                    examTimerElement.style.display = 'none'; // Hide timer
-                    headerBar.style.justifyContent = 'center'; // Center the back arrow
+                    // backArrow is already block, points/moreMenu/timer are already none
+                    // headerBar.style.justifyContent remains 'space-between', so back arrow is on right.
                 }
             } else {
                 // For main tabs (home, exams, reviews)
-                navBar.style.display = 'flex';
-                backArrow.style.display = 'none'; // Hide back arrow
-                pointsDisplay.style.display = 'flex'; // Show points
-                moreMenuContainer.style.display = 'block'; // Show more menu
-                examTimerElement.style.display = 'none'; // Hide timer
-                // headerBar.style.justifyContent remains 'space-between'
+                navBar.style.display = 'flex'; // Show bottom nav
+                // All other header elements are already set to their defaults (points/moreMenu visible, backArrow/timer hidden)
             }
 
             // If navigating to summaries, ensure the first subject tab is active
@@ -2183,7 +2183,7 @@
                     // Get the currently active subject ID
                     const activeSubjectContent = document.querySelector('.subject-content.active');
                     if (!activeSubjectContent) return;
-                    const currentSubjectId = activeSubjectContent.id.replace('-content', '');
+                    const currentSubjectId = activeSubjectContent.id.replace('--content', '');
                     const currentIndex = subjectIds.indexOf(currentSubjectId);
 
                     if (Math.abs(diffX) > swipeThreshold) {
