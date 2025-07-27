@@ -625,13 +625,7 @@
             questionsDisplayContainer.innerHTML = ''; // Clear existing content
 
             let pointsHtml = '';
-            let submissionMessage = '';
-
-            if (submissionType === 'timeUp') {
-                submissionMessage = '<p class="exam-submission-message">انتهى الوقت، تم إرسال إجاباتك تلقائيًا.</p>';
-            } else if (submissionType === 'manual') {
-                submissionMessage = '<p class="exam-submission-message">تم التسليم بنجاح!</p>';
-            }
+            // Removed submissionMessage as requested
 
             if (userId) {
                 pointsHtml = `<p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>`;
@@ -648,7 +642,6 @@
             // The summary content is directly placed within the questionsDisplayContainer
             questionsDisplayContainer.innerHTML = `
                 <div class="exam-summary-floating">
-                    ${submissionMessage}
                     <h2 class="exam-result-title">نتيجتك:</h2>
                     <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
                     <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
@@ -808,13 +801,13 @@
         }
 
         /* Updated header layout for RTL */
-        .header-right-icons {
+        .header-start-elements { /* New container for RTL right side */
             display: flex;
             align-items: center;
             gap: 0.5rem; /* Reduced gap for closer elements */
         }
 
-        .header-left-content {
+        .header-end-elements { /* New container for RTL left side */
             display: flex;
             align-items: center;
             gap: 1rem; /* Space between timer and more menu */
@@ -826,8 +819,6 @@
             height: 24px;
             color: var(--primary-color);
             cursor: pointer;
-            /* Removed absolute positioning */
-            /* Now part of flex layout */
             transition: transform 0.1s ease-in-out;
         }
 
@@ -842,7 +833,6 @@
             border-radius: 0.75rem;
             font-weight: 600;
             font-size: 0.8rem;
-            /* Removed margin-left: 1rem; as gap handles spacing */
             display: flex; /* Always flex for styling */
             align-items: center;
             justify-content: center;
@@ -855,22 +845,10 @@
             transform: scale(0.95); /* Add active state for visual feedback */
         }
 
-        .header-icons-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        /* Dark mode toggle in header - Hidden as it's moved back to settings */
-        .header-dark-mode-toggle {
-            display: none; /* Hide it from header */
-        }
-
         main {
             padding: 2rem 1.25rem;
             padding-bottom: 80px;
             text-align: center;
-            /* background-color: var(--background-color); Removed, handled by :has or section specific */
             min-height: calc(100vh - 70px - 50px);
             padding-top: calc(50px + 2rem);
             transition: background-color 0.3s ease;
@@ -1367,8 +1345,7 @@
             right: 20px;
             padding: 15px 20px;
             border-radius: 8px;
-            /* Changed box-shadow to a more subtle one */
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
             z-index: 10000; /* Ensure it's on top */
             display: none;
             opacity: 0;
@@ -1523,8 +1500,7 @@
         }
         .exam-summary-floating .exam-result-score,
         .exam-summary-floating .exam-result-points,
-        .exam-summary-floating .exam-result-percentage,
-        .exam-summary-floating .exam-submission-message {
+        .exam-summary-floating .exam-result-percentage { /* Removed submission message from here */
             font-size: 1.2rem;
             margin-bottom: 0.75rem;
             color: var(--text-color); /* Ensure text within summary is theme text color */
@@ -1615,21 +1591,22 @@
         @media (max-width: 1024px) {
             /* Override main's padding for exam-taking-section to allow it to be wider */
             main:has(#exam-taking-section.active) {
-                padding-left: 0;
-                padding-right: 0;
+                padding-left: 0.5rem; /* Add small padding to main */
+                padding-right: 0.5rem; /* Add small padding to main */
             }
 
             #exam-taking-section {
-                padding-left: 0; /* Removed padding for full width */
-                padding-right: 0; /* Removed padding for full width */
+                padding-left: 0; /* No padding here, main handles it */
+                padding-right: 0; /* No padding here, main handles it */
                 max-width: 100%; /* Ensure it spans full width */
             }
 
             .exam-question-card {
-                width: calc(100% - 2rem); /* Adjust width to account for 1rem padding on each side */
-                margin-left: 1rem; /* Add 1rem margin to align with section padding */
-                margin-right: 1rem; /* Add 1rem margin to align with section padding */
+                width: calc(100% - 1rem); /* 100% minus 0.5rem margin on each side */
+                margin-left: 0.5rem; /* Add 0.5rem margin */
+                margin-right: 0.5rem; /* Add 0.5rem margin */
                 box-sizing: border-box; /* Include padding in width calculation */
+                border-radius: 12px; /* Keep rounded corners */
             }
 
             /* Font size adjustments for tablets */
@@ -1644,8 +1621,7 @@
 
                 .exam-summary-floating .exam-result-score,
                 .exam-summary-floating .exam-result-points,
-                .exam-summary-floating .exam-result-percentage,
-                .exam-summary-floating .exam-submission-message {
+                .exam-summary-floating .exam-result-percentage {
                     font-size: 1.3rem; /* Larger for tablets */
                 }
 
@@ -1654,12 +1630,42 @@
                 }
             }
         }
+
+        /* Styles specifically for when exam-taking-section is active */
+        body:has(#exam-taking-section.active) #header-bar {
+            justify-content: space-between; /* Keep space-between */
+        }
+
+        body:has(#exam-taking-section.active) .header-start-elements {
+            display: flex; /* Ensure back-arrow is visible and points-display is hidden */
+            order: 1; /* Puts it on the right in RTL */
+        }
+
+        body:has(#exam-taking-section.active) #back-arrow {
+            display: block;
+        }
+
+        body:has(#exam-taking-section.active) #points-display {
+            display: none; /* Hide points on exam page */
+        }
+
+        body:has(#exam-taking-section.active) #exam-timer {
+            display: flex; /* Make sure it's visible */
+            order: 2; /* Puts it in the middle */
+            margin-right: auto; /* Push to center */
+            margin-left: auto; /* Push to center */
+        }
+
+        body:has(#exam-taking-section.active) .header-end-elements {
+            display: none; /* Hide the entire end elements container (more menu) */
+            order: 3; /* Puts it on the left */
+        }
     </style>
 </head>
 <body class="">
 
     <header id="header-bar">
-        <div class="header-right-icons"> <!-- New container for RTL right side -->
+        <div class="header-start-elements"> <!-- For back-arrow and points -->
             <!-- Changed to feather-arrow-right for RTL back navigation -->
             <svg id="back-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right" style="display: none;">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -1667,10 +1673,8 @@
             </svg>
             <div class="points-display" id="points-display" onclick="showTab('store')"></div>
         </div>
-
-        <div class="header-left-content"> <!-- New container for RTL left side -->
-            <div id="exam-timer" class="exam-timer-display"></div> <!-- Timer element -->
-            <!-- Dark Mode Toggle removed from header, now only in settings -->
+        <div id="exam-timer" class="exam-timer-display" style="display: none;"></div> <!-- Moved here -->
+        <div class="header-end-elements"> <!-- For more-menu -->
             <div class="more-menu-container">
                 <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="1"></circle>
@@ -1952,25 +1956,28 @@
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
+            // Reset display styles for header elements
+            backArrow.style.display = 'none';
+            pointsDisplay.style.display = 'flex'; // Default to flex
+            moreMenuContainer.style.display = 'block'; // Default to block
+            examTimerElement.style.display = 'none'; // Default to none
+
+            // Apply specific styles based on the active tab
             if (isChildPage) {
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
-                moreMenuContainer.style.display = 'none';
-                pointsDisplay.style.display = 'flex'; // Keep points display visible
-                pointsDisplay.style.marginRight = '0.5rem'; // Adjust margin to be next to arrow
 
                 if (id === 'exam-taking-section') {
-                    examTimerElement.style.display = 'flex'; // Show timer on exam page
+                    pointsDisplay.style.display = 'none'; // Hide points on exam page
+                    moreMenuContainer.style.display = 'none'; // Hide more menu on exam page
+                    examTimerElement.style.display = 'flex'; // Show timer
                 } else {
-                    examTimerElement.style.display = 'none'; // Hide timer on other child pages
+                    // For other child pages (profile, settings, etc.)
+                    pointsDisplay.style.display = 'flex'; // Show points
+                    moreMenuContainer.style.display = 'block'; // Show more menu
                 }
             } else {
                 navBar.style.display = 'flex';
-                backArrow.style.display = 'none';
-                pointsDisplay.style.display = 'flex';
-                pointsDisplay.style.marginRight = '0'; // Reset margin for main tabs
-                moreMenuContainer.style.display = 'block';
-                examTimerElement.style.display = 'none'; // Hide timer on main tabs
             }
 
             // If navigating to summaries, ensure the first subject tab is active
@@ -1994,8 +2001,6 @@
                 submitExamButton.style.display = 'none';
                 examTimerElement.textContent = '';
                 examTitleElement.textContent = '';
-                // Ensure timer is hidden when returning to exams list
-                examTimerElement.style.display = 'none';
                 questionsDisplayContainer.style.display = 'block'; // Show questions container again for next exam
             }
         }
