@@ -500,7 +500,7 @@
 
                 const minutes = Math.floor(remainingTime / 60);
                 const seconds = remainingTime % 60;
-                examTimerElement.textContent = `الوقت المتبقي: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                examTimerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }, 1000);
         }
 
@@ -513,23 +513,45 @@
             submitButton.disabled = true; // Prevent multiple submissions
             submitButton.textContent = 'جاري الإرسال...';
 
+            const questionsDisplayContainer = document.getElementById('questions-display-container');
             const examResultsElement = document.getElementById('exam-results');
+
+            // 1. Validate all questions are answered
+            const userAnswers = [];
+            let allAnswered = true;
+            currentExamData.questions.forEach((q, qIndex) => {
+                const selectedOption = document.querySelector(`input[name="question-${qIndex}"]:checked`);
+                if (selectedOption) {
+                    userAnswers.push(parseInt(selectedOption.value));
+                } else {
+                    userAnswers.push(null); // Mark as unanswered
+                    allAnswered = false;
+                }
+            });
+
+            if (!allAnswered && !timeUp) {
+                showMessageBox('الرجاء إنهاء جميع الأسئلة قبل التسليم!', 'error');
+                submitButton.disabled = false;
+                submitButton.textContent = 'إرسال الامتحان';
+                return;
+            }
+
             examResultsElement.innerHTML = '<div class="loading-indicator">جاري حساب النتيجة...</div>';
 
             let correctAnswersCount = 0;
             const totalQuestions = currentExamData.questions.length;
 
             currentExamData.questions.forEach((q, qIndex) => {
-                const selectedOption = document.querySelector(`input[name="question-${qIndex}"]:checked`);
-                if (selectedOption && parseInt(selectedOption.value) === q.correctOptionIndex) {
+                if (userAnswers[qIndex] !== null && userAnswers[qIndex] === q.correctOptionIndex) {
                     correctAnswersCount++;
                 }
             });
 
             const score = correctAnswersCount;
             const pointsEarned = correctAnswersCount * 10; // Example: 10 points per correct answer
+            const percentageScore = (totalQuestions > 0) ? ((score / totalQuestions) * 100).toFixed(1) : 0;
 
-            // Update user points in Firestore
+            // 2. Update user points in Firestore (only if logged in)
             if (window.currentUserId) {
                 await window.updatePoints(window.currentPoints + pointsEarned);
                 showMessageBox(`تم إضافة ${pointsEarned} نقطة إلى رصيدك!`, 'success');
@@ -551,22 +573,72 @@
                 showMessageBox('الرجاء تسجيل الدخول لحفظ نقاطك.', 'info');
             }
 
-            examResultsElement.innerHTML = `
-                <h2 class="exam-result-title">نتيجتك:</h2>
-                <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
-                <p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>
-                ${timeUp ? '<p class="exam-result-time-up">انتهى الوقت، تم إرسال إجاباتك تلقائيًا.</p>' : ''}
-                <button class="back-to-exams-button" onclick="showTab('exams');">العودة إلى الامتحانات</button>
-            `;
+            // 3. Display results and review
+            displayExamResults(currentExamData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp);
 
             // Hide questions and submit button
-            document.getElementById('questions-display-container').style.display = 'none';
-            document.getElementById('submit-exam-button').style.display = 'none';
-            document.getElementById('exam-timer').style.display = 'none';
-            document.getElementById('exam-taking-title').style.display = 'none';
+            questionsDisplayContainer.style.display = 'none';
+            submitButton.style.display = 'none';
+            document.getElementById('exam-taking-title').style.display = 'none'; // Hide exam title
+            document.getElementById('exam-timer').style.display = 'none'; // Hide timer from header
 
             submitButton.disabled = false;
             submitButton.textContent = 'إرسال الامتحان'; // Reset button text
+        }
+
+        function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp) {
+            const examResultsElement = document.getElementById('exam-results');
+            examResultsElement.innerHTML = `
+                <h2 class="exam-result-title">نتيجتك:</h2>
+                <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
+                <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
+                <p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>
+                ${timeUp ? '<p class="exam-result-time-up">انتهى الوقت، تم إرسال إجاباتك تلقائيًا.</p>' : ''}
+                <div class="exam-review-container">
+                    <h3>مراجعة الامتحان:</h3>
+                </div>
+                <button class="back-to-exams-button" onclick="showTab('exams');">العودة إلى الامتحانات</button>
+            `;
+
+            const reviewContainer = examResultsElement.querySelector('.exam-review-container');
+
+            examData.questions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'exam-question-card review-mode'; // Add review-mode class
+                questionDiv.innerHTML = `
+                    <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
+                    <div class="options-container">
+                        ${q.options.map((option, optIndex) => {
+                            let labelClass = 'option-label';
+                            let checkedAttr = '';
+                            let disabledAttr = 'disabled'; // Disable all inputs in review mode
+
+                            // Check if this is the correct answer
+                            if (optIndex === q.correctOptionIndex) {
+                                labelClass += ' correct-answer';
+                            }
+
+                            // Check if this was the user's selected answer
+                            if (userAnswers[qIndex] !== null && optIndex === userAnswers[qIndex]) {
+                                checkedAttr = 'checked';
+                                if (optIndex !== q.correctOptionIndex) {
+                                    labelClass += ' user-incorrect-answer'; // User selected this and it's wrong
+                                } else {
+                                    labelClass += ' user-correct-answer'; // User selected this and it's right
+                                }
+                            }
+
+                            return `
+                                <label class="${labelClass}">
+                                    <input type="radio" name="review-question-${qIndex}" value="${optIndex}" ${checkedAttr} ${disabledAttr} class="option-radio">
+                                    <span>${option}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                reviewContainer.appendChild(questionDiv);
+            });
         }
 
 
@@ -584,6 +656,12 @@
             --card-shadow: rgba(0, 0, 0, 0.08);
             --dropdown-bg: #ffffff;
             --dropdown-item-hover: #f1f3f5;
+
+            /* New colors for exam review */
+            --correct-answer-bg: #e6ffe6; /* Light green */
+            --correct-answer-border: #28a745; /* Green */
+            --incorrect-answer-bg: #ffe6e6; /* Light red */
+            --incorrect-answer-border: #dc3545; /* Red */
         }
 
         body.dark-mode {
@@ -598,6 +676,12 @@
             --card-shadow: rgba(0, 0, 0, 0.3);
             --dropdown-bg: #1e1e1e;
             --dropdown-item-hover: #2d2d2d;
+
+            /* Dark mode colors for exam review */
+            --correct-answer-bg: #1a4d2e; /* Darker green */
+            --correct-answer-border: #4CAF50; /* Green */
+            --incorrect-answer-bg: #4d1a1a; /* Darker red */
+            --incorrect-answer-border: #f44336; /* Red */
         }
 
         body {
@@ -1332,10 +1416,35 @@
             margin-bottom: 1rem;
         }
 
-        .exam-result-score, .exam-result-points, .exam-result-time-up {
+        .exam-result-score, .exam-result-points, .exam-result-time-up, .exam-result-percentage {
             font-size: 1.2rem;
             color: var(--text-color);
             margin-bottom: 0.75rem;
+        }
+
+        .exam-review-container {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px dashed var(--border-color);
+            text-align: right; /* Align review questions to the right */
+        }
+
+        .exam-review-container h3 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        /* Styles for correct and incorrect answers in review mode */
+        .option-label.correct-answer {
+            background-color: var(--correct-answer-bg);
+            border-color: var(--correct-answer-border);
+        }
+
+        .option-label.user-incorrect-answer {
+            background-color: var(--incorrect-answer-bg);
+            border-color: var(--incorrect-answer-border);
         }
 
         .back-to-exams-button {
@@ -1700,9 +1809,9 @@
                 examResultsElement.innerHTML = '';
                 examTimerElement.textContent = '';
                 examTitleElement.textContent = '';
-                examTimerElement.style.display = 'block'; // Show timer again for next exam
-                examTitleElement.style.display = 'block'; // Show title again for next exam
-                questionsDisplayContainer.style.display = 'block'; // Show questions container again
+                // Ensure timer is hidden when returning to exams list
+                examTimerElement.style.display = 'none';
+                questionsDisplayContainer.style.display = 'block'; // Show questions container again for next exam
             }
         }
 
@@ -1754,7 +1863,7 @@
         async function installApp() {
             const installEmojiSpan = document.getElementById('install-emoji');
             if (installEmojiSpan) {
-                installEmojiSpan.textContent = '🔄'; // Spinner emoji
+                installEmojiSpan.textContent = '�'; // Spinner emoji
                 installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
 
                 if (deferredPrompt) {
