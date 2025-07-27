@@ -333,7 +333,7 @@
             }
 
             // Clear existing exams to prevent duplicates on re-load
-            examsContainer.innerHTML = '<div id="loading-exams" class="loading-indicator">جاري تحميل الامتحانات...</div>';
+            examsContainer.innerHTML = '<div class="loading-indicator">جاري تحميل الامتحانات...</div>';
 
             const examsCollectionRef = collection(window.firebaseDb, `artifacts/${appId}/public/data/exams`);
 
@@ -424,13 +424,13 @@
             const examTimerElement = document.getElementById('exam-timer');
             const questionsDisplayContainer = document.getElementById('questions-display-container');
             const submitExamButton = document.getElementById('submit-exam-button');
-            const examResultsElement = document.getElementById('exam-results');
+            // const examResultsElement = document.getElementById('exam-results'); // This element is removed
 
             examTitleElement.textContent = 'جاري تحميل الامتحان...';
             examTimerElement.textContent = '';
             questionsDisplayContainer.innerHTML = '<div class="loading-indicator">جاري تحميل الأسئلة...</div>';
             submitExamButton.style.display = 'none';
-            examResultsElement.innerHTML = ''; // Clear previous results
+            // examResultsElement.innerHTML = ''; // This line is no longer needed
 
             // Reset the one-minute warning flag for a new exam
             oneMinuteWarningShown = false;
@@ -488,7 +488,7 @@
                 optionsContainer.addEventListener('click', (event) => {
                     const clickedRadio = event.target.closest('input[type="radio"]');
                     if (clickedRadio) {
-                        const questionIndex = parseInt(clickedRadio.dataset.questionIndex);
+                        const questionIndex = parseInt(clickedRadio.dataset.question-index);
                         const selectedOptionIndex = parseInt(clickedRadio.value);
 
                         // If the clicked radio was already checked and is now being clicked again, deselect it
@@ -555,7 +555,7 @@
             submitButton.textContent = 'جاري الإرسال...';
 
             const questionsDisplayContainer = document.getElementById('questions-display-container');
-            const examResultsElement = document.getElementById('exam-results');
+            // const examResultsElement = document.getElementById('exam-results'); // This element is removed
 
             // 1. Validate all questions are answered
             // Use the pre-populated userAnswers array
@@ -568,7 +568,7 @@
                 return;
             }
 
-            examResultsElement.innerHTML = '<div class="loading-indicator">جاري حساب النتيجة...</div>';
+            questionsDisplayContainer.innerHTML = '<div class="loading-indicator">جاري حساب النتيجة...</div>';
 
             let correctAnswersCount = 0;
             const totalQuestions = currentExamData.questions.length;
@@ -611,7 +611,7 @@
             displayExamResults(currentExamData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, window.currentUserId);
 
             // Hide questions and submit button
-            questionsDisplayContainer.style.display = 'none';
+            questionsDisplayContainer.style.display = 'block'; // Ensure container is visible for results
             submitButton.style.display = 'none';
             document.getElementById('exam-taking-title').style.display = 'none'; // Hide exam title
             document.getElementById('exam-timer').style.display = 'none'; // Hide timer from header
@@ -621,7 +621,9 @@
         }
 
         function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, userId) {
-            const examResultsElement = document.getElementById('exam-results');
+            const questionsDisplayContainer = document.getElementById('questions-display-container');
+            questionsDisplayContainer.innerHTML = ''; // Clear existing content
+
             let pointsHtml = '';
             let submissionMessage = '';
 
@@ -630,7 +632,6 @@
             } else if (submissionType === 'manual') {
                 submissionMessage = '<p class="exam-submission-message">تم التسليم بنجاح!</p>';
             }
-
 
             if (userId) {
                 pointsHtml = `<p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>`;
@@ -644,23 +645,26 @@
                 `;
             }
 
-            examResultsElement.innerHTML = `
-                ${submissionMessage}
-                <h2 class="exam-result-title">نتيجتك:</h2>
-                <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
-                <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
-                ${pointsHtml}
+            // The summary content is directly placed within the questionsDisplayContainer
+            questionsDisplayContainer.innerHTML = `
+                <div class="exam-summary-floating">
+                    ${submissionMessage}
+                    <h2 class="exam-result-title">نتيجتك:</h2>
+                    <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
+                    <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
+                    ${pointsHtml}
+                    <button class="back-to-exams-button" onclick="showTab('exams');">العودة إلى الامتحانات</button>
+                </div>
                 <div class="exam-review-container">
                     <h3>مراجعة الامتحان:</h3>
                 </div>
-                <button class="back-to-exams-button" onclick="showTab('exams');">العودة إلى الامتحانات</button>
             `;
 
-            const reviewContainer = examResultsElement.querySelector('.exam-review-container');
+            const reviewContainer = questionsDisplayContainer.querySelector('.exam-review-container');
 
             examData.questions.forEach((q, qIndex) => {
                 const questionDiv = document.createElement('div');
-                questionDiv.className = 'exam-question-card review-mode'; // Add review-mode class
+                questionDiv.className = 'exam-question-card review-mode'; // Add review-mode class for styling individual review cards
                 questionDiv.innerHTML = `
                     <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
                     <div class="options-container">
@@ -810,11 +814,17 @@
         }
 
         #back-arrow {
-            display: none;
+            display: none; /* Keep hidden by default */
             width: 24px;
             height: 24px;
             color: var(--primary-color);
             cursor: pointer;
+            /* Positioning for the edge */
+            position: absolute; /* Absolute position within the header */
+            right: 1.25rem; /* Aligned with header padding */
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1001; /* Ensure it's above other header content if needed */
         }
 
         .points-display {
@@ -1483,53 +1493,35 @@
             transform: scale(0.98);
         }
 
-        #exam-results {
-            background-color: var(--background-color); /* Result card background is now white/dark grey */
-            padding: 2rem;
-            border-radius: 12px;
-            margin-top: 2rem;
-            box-shadow: 0 4px 12px var(--card-shadow);
+        /* New style for the floating summary (no background/shadow) */
+        .exam-summary-floating {
             text-align: center;
-            color: var(--text-color); /* Text color for results section */
+            margin-bottom: 2rem; /* Space between summary and review questions */
+            padding: 1rem; /* Add some padding for content spacing */
+            /* No background, border, or shadow here as per request */
         }
 
-        #exam-results .exam-result-title {
-            color: var(--primary-color); /* Ensure title is primary color */
-        }
-
-        #exam-results .exam-result-score,
-        #exam-results .exam-result-points,
-        #exam-results .exam-result-percentage,
-        #exam-results .exam-submission-message,
-        #exam-results .exam-review-container h3 {
-            color: var(--text-color); /* Ensure all text within results section is theme text color */
-        }
-
-        /* Special handling for points-not-counted text within results */
-        #exam-results .points-not-counted {
-            color: var(--secondary-color); /* Secondary color for this specific text */
-        }
-        #exam-results .points-not-counted span {
-             color: var(--incorrect-answer-border); /* Use a light red from theme for strike-through */
-        }
-
-
-        .exam-result-title {
+        .exam-summary-floating .exam-result-title {
             font-size: 2rem;
             font-weight: 700;
             margin-bottom: 1rem;
+            color: var(--primary-color); /* Ensure title is primary color */
         }
-
-        .exam-result-score, .exam-result-points, .exam-result-time-up, .exam-result-percentage {
+        .exam-summary-floating .exam-result-score,
+        .exam-summary-floating .exam-result-points,
+        .exam-summary-floating .exam-result-percentage,
+        .exam-summary-floating .exam-submission-message {
             font-size: 1.2rem;
             margin-bottom: 0.75rem;
+            color: var(--text-color); /* Ensure text within summary is theme text color */
+        }
+        .exam-summary-floating .points-not-counted {
+            color: var(--secondary-color); /* Secondary color for this specific text */
+        }
+        .exam-summary-floating .points-not-counted span {
+            color: var(--incorrect-answer-border); /* Use a light red from theme for strike-through */
         }
 
-        .exam-submission-message {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-        }
 
         .exam-review-container {
             margin-top: 2rem;
@@ -1542,32 +1534,33 @@
             font-size: 1.5rem;
             margin-bottom: 1.5rem;
             text-align: center;
+            color: var(--primary-color); /* Consistent with other titles */
         }
 
         /* Styles for correct and incorrect answers in review mode within the white/dark grey background */
-        #exam-results .option-label.correct-answer {
+        .exam-question-card.review-mode .option-label.correct-answer {
             background-color: var(--correct-answer-bg); /* Green from theme */
             border-color: var(--correct-answer-border); /* Green border from theme */
             color: var(--text-color); /* Text color from theme */
         }
 
-        #exam-results .option-label.user-incorrect-answer {
+        .exam-question-card.review-mode .option-label.user-incorrect-answer {
             background-color: var(--incorrect-answer-bg); /* Red from theme */
             border-color: var(--incorrect-answer-border); /* Red border from theme */
             color: var(--text-color); /* Text color from theme */
         }
 
-        #exam-results .option-label {
+        .exam-question-card.review-mode .option-label {
             background-color: var(--active-bg); /* Light blue background for options */
             color: var(--text-color); /* Text color from theme */
             border-color: var(--border-color); /* Border color from theme */
         }
 
-        #exam-results .option-label span {
+        .exam-question-card.review-mode .option-label span {
             color: var(--text-color); /* Ensure option text is theme text color */
         }
 
-        #exam-results .option-radio {
+        .exam-question-card.review-mode .option-radio {
             accent-color: var(--primary-color); /* Make radio button primary color */
         }
 
@@ -1600,10 +1593,10 @@
 
     <header id="header-bar">
         <div class="header-right-icons"> <!-- New container for RTL right side -->
-            <!-- Changed to feather-arrow-left for RTL back navigation -->
-            <svg id="back-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left" style="display: none;">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
+            <!-- Changed to feather-arrow-right for RTL back navigation -->
+            <svg id="back-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right" style="display: none;">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
             <div class="points-display" id="points-display" onclick="showTab('store')"></div>
         </div>
@@ -1666,9 +1659,7 @@
                 <!-- Exam questions will be rendered here dynamically -->
             </div>
             <button id="submit-exam-button" style="display: none;">إرسال الامتحان</button>
-            <div id="exam-results">
-                <!-- Exam results will be displayed here -->
-            </div>
+            <!-- The exam-results div has been removed as per request -->
         </section>
 
         <section id="reviews" class="">
@@ -1926,13 +1917,13 @@
                 // When navigating back to exams, clear exam-taking section content
                 const questionsDisplayContainer = document.getElementById('questions-display-container');
                 const submitExamButton = document.getElementById('submit-exam-button');
-                const examResultsElement = document.getElementById('exam-results');
+                // const examResultsElement = document.getElementById('exam-results'); // This element is removed
                 const examTimerElement = document.getElementById('exam-timer');
                 const examTitleElement = document.getElementById('exam-taking-title');
 
                 questionsDisplayContainer.innerHTML = '';
                 submitExamButton.style.display = 'none';
-                examResultsElement.innerHTML = '';
+                // examResultsElement.innerHTML = ''; // This line is no longer needed
                 examTimerElement.textContent = '';
                 examTitleElement.textContent = '';
                 // Ensure timer is hidden when returning to exams list
