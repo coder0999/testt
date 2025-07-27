@@ -24,7 +24,8 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        // Import collection and onSnapshot for listening to real-time updates
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // Firebase Configuration:
         // IMPORTANT: For deployment on GitHub or any other hosting, you MUST replace the placeholder
@@ -85,9 +86,11 @@
             if (user) {
                 await saveUserProfile(user); // Save/update user profile in Firestore
                 await getPoints(); // Fetch points for the logged-in user
+                loadExams(); // Load exams once authenticated
             } else {
                 window.currentPoints = 0; // Reset points if no user is logged in
                 updatePointsDisplay(); // Update display for logged out state
+                loadExams(); // Still load exams even if not logged in (public data)
             }
         });
 
@@ -269,6 +272,64 @@
                 }
             }
         };
+
+        // Function to load exams from Firestore and display them
+        window.loadExams = () => {
+            if (!window.firebaseDb) {
+                console.warn('Firebase Firestore not initialized. Cannot load exams.');
+                return;
+            }
+
+            const examsContainer = document.getElementById('exams-cards-container');
+            if (!examsContainer) {
+                console.error('Exams container not found.');
+                return;
+            }
+
+            // Clear existing exams to prevent duplicates on re-load
+            examsContainer.innerHTML = '<div id="loading-exams" class="loading-indicator">جاري تحميل الامتحانات...</div>';
+
+            const examsCollectionRef = collection(window.firebaseDb, `artifacts/${appId}/public/data/exams`);
+
+            // Listen for real-time updates to the exams collection
+            onSnapshot(examsCollectionRef, (snapshot) => {
+                examsContainer.innerHTML = ''; // Clear existing exams
+                if (snapshot.empty) {
+                    examsContainer.innerHTML = '<p class="text-gray-600">لا توجد امتحانات متاحة حاليًا.</p>';
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const exam = doc.data();
+                    const examId = doc.id; // Get the document ID for potential future use (e.g., starting exam)
+
+                    const examCard = document.createElement('div');
+                    examCard.className = 'exam-card';
+                    examCard.innerHTML = `
+                        <h3 class="exam-card-title">${exam.name}</h3>
+                        <p class="exam-card-info">المدة: ${exam.duration} دقيقة</p>
+                        <p class="exam-card-info">عدد الأسئلة: ${exam.numQuestions}</p>
+                        <button class="exam-start-button" data-exam-id="${examId}">ابدأ الاختبار</button>
+                    `;
+                    examsContainer.appendChild(examCard);
+                });
+
+                // Add event listeners to "Start Exam" buttons
+                document.querySelectorAll('.exam-start-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const examId = event.target.dataset.examId;
+                        // Here you would navigate to the exam taking page, passing the examId
+                        console.log(`Starting exam with ID: ${examId}`);
+                        alert(`سيتم بدء اختبار: ${examId}\n(هذه مجرد رسالة تنبيه، ستحتاج إلى بناء صفحة الاختبار الفعلية)`);
+                    });
+                });
+            }, (error) => {
+                console.error('Error fetching exams:', error);
+                examsContainer.innerHTML = '<p class="text-red-500">حدث خطأ أثناء تحميل الامتحانات.</p>';
+            });
+        };
+
+
     </script>
     <style>
         :root {
@@ -795,6 +856,77 @@
             -ms-overflow-style: none;  /* IE and Edge */
             scrollbar-width: none;  /* Firefox */
         }
+
+        /* New styles for Exam Cards */
+        .exams-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Responsive grid */
+            gap: 1.5rem; /* Space between cards */
+            padding: 1rem;
+            max-width: 1000px; /* Max width for the grid */
+            margin: 0 auto; /* Center the grid */
+            text-align: right; /* Align text inside cards to the right */
+        }
+
+        .exam-card {
+            background-color: var(--background-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px var(--card-shadow);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .exam-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .exam-card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .exam-card-info {
+            font-size: 0.95rem;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .exam-start-button {
+            background-color: #28a745; /* Green for start button */
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            align-self: flex-end; /* Align button to the right within the card */
+        }
+
+        .exam-start-button:hover {
+            background-color: #218838;
+        }
+
+        .exam-start-button:active {
+            transform: scale(0.98);
+        }
+
+        .loading-indicator {
+            text-align: center;
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            padding: 2rem;
+        }
+
     </style>
 </head>
 <body class="">
@@ -809,7 +941,7 @@
         </div>
 
         <div class="more-menu-container" style="display: block;">
-            <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-more-vertical">
+            <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="1"></circle>
                 <circle cx="12" cy="5" r="1"></circle>
                 <circle cx="12" cy="19" r="1"></circle>
@@ -850,6 +982,10 @@
 
         <section id="exams" class="">
             <h1>أهلاً في صفحة الاختبارات</h1>
+            <div id="exams-cards-container" class="exams-grid-container">
+                <!-- Exam cards will be loaded here dynamically -->
+                <div class="loading-indicator">جاري تحميل الامتحانات...</div>
+            </div>
         </section>
 
         <section id="reviews" class="">
