@@ -65,6 +65,9 @@
         let examDurationSeconds = 0;
         let examStartTime = 0;
 
+        // Global variable to store completed exam IDs
+        let completedExamsSet = new Set();
+
         // Function to handle initial authentication (custom token or anonymous)
         async function authenticateUser() {
             try {
@@ -92,11 +95,12 @@
             if (user) {
                 await saveUserProfile(user); // Save/update user profile in Firestore
                 await getPoints(); // Fetch points for the logged-in user
-                loadExams(); // Load exams once authenticated
+                await fetchCompletedExams(); // Fetch completed exams for the logged-in user
             } else {
                 window.currentPoints = 0; // Reset points if no user is logged in
                 updatePointsDisplay(); // Update display for logged out state
-                loadExams(); // Still load exams even if not logged in (public data)
+                completedExamsSet.clear(); // Clear completed exams if logged out
+                loadExams(); // Still load exams even if not logged in (public data, no filtering)
             }
         });
 
@@ -136,6 +140,8 @@
                 console.log('User signed out.');
                 window.currentPoints = 0; // Reset points on sign out
                 updatePointsDisplay(); // Update display for logged out state
+                completedExamsSet.clear(); // Clear completed exams on sign out
+                loadExams(); // Re-load exams to show all available
             } catch (error) {
                 console.error('Error during sign out:', error);
             }
@@ -279,6 +285,36 @@
             }
         };
 
+        // Function to fetch completed exams for the current user
+        async function fetchCompletedExams() {
+            if (!window.firebaseDb || !window.currentUserId || !isAuthReady) {
+                console.warn('Cannot fetch completed exams: Firebase not ready or user not logged in.');
+                completedExamsSet.clear(); // Clear the set if not logged in
+                return;
+            }
+            const userId = window.currentUserId;
+            const completedExamsCollectionRef = collection(window.firebaseDb, `artifacts/${appId}/users/${userId}/completedExams`);
+
+            try {
+                // Use onSnapshot for real-time updates to completed exams
+                onSnapshot(completedExamsCollectionRef, (snapshot) => {
+                    completedExamsSet.clear(); // Clear existing set
+                    snapshot.forEach((doc) => {
+                        completedExamsSet.add(doc.id); // Add examId to the set
+                    });
+                    console.log('Completed exams fetched:', completedExamsSet);
+                    // Re-load exams on the UI to reflect changes
+                    loadExams();
+                }, (error) => {
+                    console.error('Error fetching completed exams:', error);
+                    completedExamsSet.clear(); // Clear on error
+                });
+            } catch (e) {
+                console.error('Error setting up onSnapshot for completed exams:', e);
+                completedExamsSet.clear(); // Clear on error
+            }
+        }
+
         // Function to load exams from Firestore and display them
         window.loadExams = () => {
             if (!window.firebaseDb) {
@@ -308,6 +344,12 @@
                 snapshot.forEach((doc) => {
                     const exam = doc.data();
                     const examId = doc.id; // Get the document ID for potential future use (e.g., starting exam)
+
+                    // Check if the exam is completed by the current user
+                    if (completedExamsSet.has(examId)) {
+                        console.log(`Exam ${examId} is completed, skipping display.`);
+                        return; // Skip this exam
+                    }
 
                     const examCard = document.createElement('div');
                     examCard.className = 'exam-card';
@@ -491,6 +533,20 @@
             if (window.currentUserId) {
                 await window.updatePoints(window.currentPoints + pointsEarned);
                 showMessageBox(`تم إضافة ${pointsEarned} نقطة إلى رصيدك!`, 'success');
+
+                // Record exam completion
+                const userId = window.currentUserId;
+                const examId = currentExamData.id;
+                const completedExamDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/completedExams`, examId);
+                try {
+                    await setDoc(completedExamDocRef, { completedAt: new Date().toISOString() }, { merge: true });
+                    console.log(`Exam ${examId} marked as completed for user ${userId}.`);
+                    // The onSnapshot in fetchCompletedExams will automatically trigger loadExams to update the list
+                } catch (e) {
+                    console.error('Error marking exam as completed:', e);
+                    showMessageBox('حدث خطأ في حفظ حالة الامتحان المكتمل.', 'error');
+                }
+
             } else {
                 showMessageBox('الرجاء تسجيل الدخول لحفظ نقاطك.', 'info');
             }
@@ -581,6 +637,19 @@
             top: 0;
             width: 100%;
             z-index: 1000;
+        }
+
+        /* Updated header layout for RTL */
+        .header-right-icons {
+            display: flex;
+            align-items: center;
+            gap: 1rem; /* Space between back arrow and points */
+        }
+
+        .header-left-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem; /* Space between timer and more menu */
         }
 
         #back-arrow {
@@ -1159,16 +1228,16 @@
             text-align: center;
         }
 
-        #exam-timer {
+        /* Timer style - now blue and fixed within header */
+        .exam-timer-display {
             font-size: 1.2rem;
             font-weight: 600;
-            color: #d32f2f; /* Red for timer */
-            background-color: #ffebee;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            color: var(--primary-color); /* Blue color */
+            background-color: var(--active-bg);
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.75rem;
+            display: none; /* Hidden by default, controlled by JS */
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .exam-question-card {
@@ -1295,24 +1364,28 @@
 <body class="">
 
     <header id="header-bar">
-        <div class="header-icons-left">
-            <svg id="back-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right" style="display: none;">
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-                <polyline points="12 5 19 12 12 19"></polyline>
+        <div class="header-right-icons"> <!-- New container for RTL right side -->
+            <!-- Changed to feather-arrow-left for RTL back navigation -->
+            <svg id="back-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left" style="display: none;">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
             <div class="points-display" id="points-display" onclick="showTab('store')"></div>
         </div>
 
-        <div class="more-menu-container" style="display: block;">
-            <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="1"></circle>
-                <circle cx="12" cy="5" r="1"></circle>
-                <circle cx="12" cy="19" r="1"></circle>
-            </svg>
-            <div id="more-menu-dropdown" class="">
-                <a class="dropdown-item" onclick="showTab('profile'); toggleMoreMenu();">الملف الشخصي</a>
-                <a class="dropdown-item" onclick="showTab('settings'); toggleMoreMenu();">الإعدادات</a>
-                <a class="dropdown-item" onclick="showTab('notifications'); toggleMoreMenu();">الإشعارات</a>
+        <div class="header-left-content"> <!-- New container for RTL left side -->
+            <div id="exam-timer" class="exam-timer-display"></div> <!-- Timer element -->
+            <div class="more-menu-container">
+                <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="12" cy="5" r="1"></circle>
+                    <circle cx="12" cy="19" r="1"></circle>
+                </svg>
+                <div id="more-menu-dropdown" class="">
+                    <a class="dropdown-item" onclick="showTab('profile'); toggleMoreMenu();">الملف الشخصي</a>
+                    <a class="dropdown-item" onclick="showTab('settings'); toggleMoreMenu();">الإعدادات</a>
+                    <a class="dropdown-item" onclick="showTab('notifications'); toggleMoreMenu();">الإشعارات</a>
+                </div>
             </div>
         </div>
     </header>
@@ -1354,7 +1427,6 @@
         <!-- New Section for Exam Taking -->
         <section id="exam-taking-section" class="">
             <h1 id="exam-taking-title"></h1>
-            <div id="exam-timer"></div>
             <div id="questions-display-container">
                 <!-- Exam questions will be rendered here dynamically -->
             </div>
@@ -1578,25 +1650,31 @@
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
+            const examTimerElement = document.getElementById('exam-timer'); // Get the timer element
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
             if (isChildPage) {
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
-                // Only hide points display if it's a child page AND not the store page itself
-                // If it's the store page, we want the points to remain visible and clickable
-                if (id !== 'store') {
-                   pointsDisplay.style.display = 'none';
-                } else {
-                   pointsDisplay.style.display = 'flex'; // Ensure it's visible on store page
-                }
                 moreMenuContainer.style.display = 'none';
+                pointsDisplay.style.display = 'none'; // Hide points display on child pages by default
+
+                if (id === 'exam-taking-section') {
+                    examTimerElement.style.display = 'flex'; // Show timer on exam page
+                    // Points display remains hidden
+                } else if (id === 'store') {
+                    pointsDisplay.style.display = 'flex'; // Show points on store page
+                    examTimerElement.style.display = 'none'; // Hide timer on store page
+                } else {
+                    examTimerElement.style.display = 'none'; // Hide timer on other child pages
+                }
             } else {
                 navBar.style.display = 'flex';
                 backArrow.style.display = 'none';
                 pointsDisplay.style.display = 'flex';
                 moreMenuContainer.style.display = 'block';
+                examTimerElement.style.display = 'none'; // Hide timer on main tabs
             }
 
             // If navigating to summaries, ensure the first subject tab is active
