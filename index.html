@@ -26,14 +26,29 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-        // Use global variables provided by the Canvas environment for Firebase configuration
-        // If __firebase_config is not defined (e.g., outside Canvas), fall back to an empty object.
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        // Use __app_id for consistent Firestore paths. If not defined, use a default ID.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Firebase Configuration:
+        // IMPORTANT: For deployment on GitHub or any other hosting, you MUST replace the placeholder
+        // configuration below with your actual Firebase project configuration.
+        // You can find this in your Firebase Console -> Project settings -> Your apps -> Web app.
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3BSf75v3qFs2xm7i-TJksrcEHELEmVpo", // Example: "AIzaSyC...yourkey"
+            authDomain: "potato-e7861.firebaseapp.com", // Example: "your-project-id.firebaseapp.com"
+            projectId: "potato-e7861", // Example: "your-project-id"
+            storageBucket: "potato-e7861.firebasestorage.app", // Example: "your-project-id.appspot.com"
+            messagingSenderId: "905443935896", // Example: "1234567890"
+            appId: "1:905443935896:web:93c9de4305e49bb6ff32ed" // Example: "1:1234567890:web:abcdef123456"
+        };
+
+        // For Canvas environment, use the provided global firebaseConfig.
+        // For deployment, ensure you've replaced the placeholders above.
+        const effectiveFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
+
+        // Determine appId: Use Canvas's __app_id if available, otherwise use projectId from config.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : effectiveFirebaseConfig.projectId;
+
 
         // Initialize Firebase
-        window.firebaseApp = initializeApp(firebaseConfig);
+        window.firebaseApp = initializeApp(effectiveFirebaseConfig);
         window.firebaseAuth = getAuth(window.firebaseApp);
         window.firebaseDb = getFirestore(window.firebaseApp);
         window.googleAuthProvider = GoogleAuthProvider; // Expose GoogleAuthProvider for sign-in
@@ -46,17 +61,18 @@
         // Function to handle initial authentication (custom token or anonymous)
         async function authenticateUser() {
             try {
+                // In Canvas environment, we might get a custom token for testing.
+                // For deployed apps, anonymous sign-in is a common fallback if no user is logged in.
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    // Sign in with provided custom token if available
                     await signInWithCustomToken(window.firebaseAuth, __initial_auth_token);
-                    console.log('Signed in with custom token.');
+                    console.log('Signed in with custom token (Canvas environment).');
                 } else {
-                    // Sign in anonymously if no custom token is provided
+                    // For deployed applications, sign in anonymously if no other auth method is active.
                     await signInAnonymously(window.firebaseAuth);
-                    console.log('Signed in anonymously.');
+                    console.log('Signed in anonymously (deployed environment fallback).');
                 }
             } catch (error) {
-                console.error('Firebase authentication error:', error);
+                console.error('Firebase authentication error during initial setup:', error);
             }
         }
 
