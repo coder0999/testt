@@ -1378,13 +1378,13 @@
             background-color: var(--background-color);
             border-radius: 12px;
             box-shadow: 0 4px 12px var(--card-shadow);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1.8rem; /* Increased padding for all devices */
+            margin-bottom: 1.8rem; /* Increased margin for all devices */
             border: 1px solid var(--border-color);
         }
 
         .question-text {
-            font-size: 1.15rem;
+            font-size: 1.05rem; /* Slightly smaller font size for question text for all devices */
             color: var(--text-color);
             margin-bottom: 1rem;
             line-height: 1.6;
@@ -1419,7 +1419,7 @@
         }
 
         .option-label span {
-            font-size: 1rem;
+            font-size: 0.95rem; /* Slightly smaller font size for options for all devices */
             color: var(--text-color);
             flex-grow: 1; /* Allow text to take available space */
         }
@@ -1451,57 +1451,88 @@
         }
 
         #exam-results {
-            background-color: var(--active-bg);
+            background-color: var(--primary-color); /* Changed to primary blue */
             padding: 2rem;
             border-radius: 12px;
             margin-top: 2rem;
             box-shadow: 0 4px 12px var(--card-shadow);
             text-align: center;
+            color: white; /* Text color for results section */
         }
+
+        #exam-results .exam-result-title,
+        #exam-results .exam-result-score,
+        #exam-results .exam-result-points,
+        #exam-results .exam-result-percentage,
+        #exam-results .exam-submission-message,
+        #exam-results .exam-review-container h3 {
+            color: white; /* Ensure all text within results section is white */
+        }
+
+        /* Special handling for points-not-counted text within results */
+        #exam-results .points-not-counted {
+            color: rgba(255, 255, 255, 0.8); /* Lighter white for this specific text */
+        }
+        #exam-results .points-not-counted span {
+             color: var(--incorrect-answer-bg); /* Use a light red from theme for strike-through */
+        }
+
 
         .exam-result-title {
             font-size: 2rem;
             font-weight: 700;
-            color: var(--primary-color);
             margin-bottom: 1rem;
         }
 
         .exam-result-score, .exam-result-points, .exam-result-time-up, .exam-result-percentage {
             font-size: 1.2rem;
-            color: var(--text-color);
             margin-bottom: 0.75rem;
         }
 
         .exam-submission-message {
             font-size: 1.3rem;
             font-weight: 600;
-            color: var(--primary-color);
             margin-bottom: 1.5rem;
         }
 
         .exam-review-container {
             margin-top: 2rem;
             padding-top: 1.5rem;
-            border-top: 1px dashed var(--border-color);
+            border-top: 1px dashed rgba(255, 255, 255, 0.5); /* White dashed border for review */
             text-align: right; /* Align review questions to the right */
         }
 
         .exam-review-container h3 {
             font-size: 1.5rem;
-            color: var(--primary-color);
             margin-bottom: 1.5rem;
             text-align: center;
         }
 
-        /* Styles for correct and incorrect answers in review mode */
-        .option-label.correct-answer {
-            background-color: var(--correct-answer-bg);
-            border-color: var(--correct-answer-border);
+        /* Styles for correct and incorrect answers in review mode within the blue background */
+        #exam-results .option-label.correct-answer {
+            background-color: rgba(40, 167, 69, 0.8); /* Green with transparency */
+            border-color: white; /* White border for contrast */
+            color: white;
         }
 
-        .option-label.user-incorrect-answer {
-            background-color: var(--incorrect-answer-bg);
-            border-color: var(--incorrect-answer-border);
+        #exam-results .option-label.user-incorrect-answer {
+            background-color: rgba(220, 53, 69, 0.8); /* Red with transparency */
+            border-color: white; /* White border for contrast */
+            color: white;
+        }
+
+        #exam-results .option-label {
+            background-color: rgba(255, 255, 255, 0.1); /* Light transparent background for options */
+            color: white; /* White text for options */
+            border-color: rgba(255, 255, 255, 0.3); /* Lighter border */
+        }
+
+        #exam-results .option-label span {
+            color: white; /* Ensure option text is white */
+        }
+
+        #exam-results .option-radio {
+            accent-color: white; /* Make radio button white */
         }
 
         .back-to-exams-button {
@@ -1525,49 +1556,8 @@
             transform: scale(0.98);
         }
 
-        /* Responsive adjustments for phones (max-width: 767px) */
-        @media (max-width: 767px) {
-            .exam-question-card {
-                padding: 1.2rem; /* Slightly larger padding for phones */
-                margin-bottom: 1.2rem; /* Slightly larger margin for phones */
-            }
-
-            .question-text {
-                font-size: 0.95rem; /* Smaller font size for question text */
-            }
-
-            .option-label span {
-                font-size: 0.85rem; /* Smaller font size for options */
-            }
-
-            #submit-exam-button {
-                padding: 0.9rem 1.8rem; /* Adjusted padding for button */
-                font-size: 1.05rem; /* Adjusted font size for button */
-            }
-
-            #exam-results {
-                padding: 1.8rem; /* Adjusted padding for results */
-            }
-
-            .exam-result-title {
-                font-size: 1.8rem; /* Adjusted font size for result title */
-            }
-
-            .exam-result-score, .exam-result-points, .exam-result-time-up, .exam-result-percentage {
-                font-size: 1.1rem; /* Adjusted font size for result text */
-            }
-
-            .exam-submission-message {
-                font-size: 1.2rem; /* Adjusted font size for submission message */
-            }
-
-            .exam-review-container h3 {
-                font-size: 1.4rem; /* Adjusted font size for review title */
-            }
-        }
-
-        /* No specific tablet layout, keeping phone layout for all smaller screens */
-        /* The previous @media (min-width: 768px) block is removed */
+        /* No specific media queries for font sizes or card padding,
+           as they are now set to be consistent across all devices. */
     </style>
 </head>
 <body class="">
@@ -1963,7 +1953,7 @@
         async function installApp() {
             const installEmojiSpan = document.getElementById('install-emoji');
             if (installEmojiSpan) {
-                installEmojiSpan.textContent = '�'; // Spinner emoji
+                installEmojiSpan.textContent = '🔄'; // Spinner emoji
                 installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
 
                 if (deferredPrompt) {
@@ -1979,7 +1969,7 @@
                         }
                     } else {
                         console.log('User dismissed the A2HS prompt');
-                        installEmojiSpan.textContent = '📥'; // Revert to download emoji
+                        installEmojiSpan.textContent = '�'; // Revert to download emoji
                         installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
                     }
                     deferredPrompt = null; // Clear the deferredPrompt
