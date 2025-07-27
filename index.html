@@ -1918,7 +1918,12 @@
 
         // Function to show main tabs
         function showTab(id) {
-            // Scroll the entire window to the top instantly
+            // Scroll the main content area to the top
+            const mainContent = document.getElementById('main');
+            if (mainContent) {
+                mainContent.scrollTop = 0;
+            }
+            // Also scroll window to top as a fallback/belt-and-suspenders approach
             window.scrollTo(0, 0);
 
             document.querySelectorAll('section').forEach(sec => {
@@ -1936,35 +1941,41 @@
             }
 
             const navBar = document.querySelector('.bottom-nav');
+            const headerBar = document.getElementById('header-bar'); // Get header bar
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
-            const examTimerElement = document.getElementById('exam-timer'); // Get the timer element
+            const examTimerElement = document.getElementById('exam-timer');
+
+            // Reset header bar alignment
+            headerBar.style.justifyContent = 'space-between'; // Default to space-between
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
-            // Reset display styles for header elements
-            backArrow.style.display = 'none';
-            pointsDisplay.style.display = 'flex'; // Default to flex
-            moreMenuContainer.style.display = 'block'; // Default to block
-            examTimerElement.style.display = 'none'; // Default to none
-
-            // Apply specific styles based on the active tab
             if (isChildPage) {
                 navBar.style.display = 'none';
-                backArrow.style.display = 'block';
+                backArrow.style.display = 'block'; // Show back arrow
 
                 if (id === 'exam-taking-section') {
-                    pointsDisplay.style.display = 'none'; // Hide points on exam page
-                    moreMenuContainer.style.display = 'none'; // Hide more menu on exam page
+                    pointsDisplay.style.display = 'none'; // Hide points
+                    moreMenuContainer.style.display = 'none'; // Hide more menu
                     examTimerElement.style.display = 'flex'; // Show timer
+                    // headerBar.style.justifyContent remains 'space-between' for timer alignment
                 } else {
-                    // For other child pages (profile, settings, etc.)
-                    pointsDisplay.style.display = 'flex'; // Show points
-                    moreMenuContainer.style.display = 'block'; // Show more menu
+                    // For other child pages (profile, settings, store, summaries, notifications)
+                    pointsDisplay.style.display = 'none'; // Hide points
+                    moreMenuContainer.style.display = 'none'; // Hide more menu
+                    examTimerElement.style.display = 'none'; // Hide timer
+                    headerBar.style.justifyContent = 'center'; // Center the back arrow
                 }
             } else {
+                // For main tabs (home, exams, reviews)
                 navBar.style.display = 'flex';
+                backArrow.style.display = 'none'; // Hide back arrow
+                pointsDisplay.style.display = 'flex'; // Show points
+                moreMenuContainer.style.display = 'block'; // Show more menu
+                examTimerElement.style.display = 'none'; // Hide timer
+                // headerBar.style.justifyContent remains 'space-between'
             }
 
             // If navigating to summaries, ensure the first subject tab is active
