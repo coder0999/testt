@@ -553,10 +553,9 @@
 
             const submitButton = document.getElementById('submit-exam-button');
             submitButton.disabled = true; // Prevent multiple submissions
-            submitButton.textContent = 'جاري الإرسال...';
+            submitButton.textContent = 'جاري الإرسال...'; // Changed to 'جاري الإرسال...' temporarily
 
             const questionsDisplayContainer = document.getElementById('questions-display-container');
-            // const examResultsElement = document.getElementById('exam-results'); // This element is removed
 
             // 1. Validate all questions are answered
             // Use the pre-populated userAnswers array
@@ -565,7 +564,7 @@
             if (!allAnswered && submissionType === 'manual') { // Only check for manual submission
                 showMessageBox('الرجاء إنهاء جميع الأسئلة قبل التسليم!', 'error');
                 submitButton.disabled = false;
-                submitButton.textContent = 'إرسال الامتحان';
+                submitButton.textContent = 'تسليم'; // Revert button text
                 return;
             }
 
@@ -618,7 +617,7 @@
             document.getElementById('exam-timer').style.display = 'none'; // Hide timer from header
 
             submitButton.disabled = false;
-            submitButton.textContent = 'إرسال الامتحان'; // Reset button text
+            submitButton.textContent = 'تسليم'; // Reset button text to 'تسليم'
         }
 
         function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, userId) {
@@ -654,11 +653,11 @@
                     <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
                     <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
                     ${pointsHtml}
-                    <button class="back-to-exams-button" onclick="showTab('exams');">العودة إلى الامتحانات</button>
                 </div>
                 <div class="exam-review-container">
                     <h3>مراجعة الامتحان:</h3>
                 </div>
+                <button class="back-to-exams-button" onclick="showTab('exams');">العودة إلى الامتحانات</button>
             `;
 
             const reviewContainer = questionsDisplayContainer.querySelector('.exam-review-container');
@@ -856,6 +855,11 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+        }
+
+        /* Dark mode toggle in header - Hidden as it's moved back to settings */
+        .header-dark-mode-toggle {
+            display: none; /* Hide it from header */
         }
 
         main {
@@ -1359,7 +1363,7 @@
             right: 20px;
             padding: 15px 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 44px 8px rgba(0, 0, 0, 0.1);
             z-index: 10000; /* Ensure it's on top */
             display: none;
             opacity: 0;
@@ -1420,7 +1424,7 @@
             font-weight: 700; /* Make it bolder */
         }
 
-
+        /* Exam Question Card styling */
         .exam-question-card {
             background-color: var(--background-color); /* Card background */
             border-radius: 12px;
@@ -1527,12 +1531,21 @@
             color: var(--incorrect-answer-border); /* Use a light red from theme for strike-through */
         }
 
+        /* Make questions-display-container a flex column to push button to bottom */
+        #questions-display-container {
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 50px - 2rem - 2rem); /* Header + top/bottom padding */
+            /* Adjusted to account for the header bar and padding */
+            padding-top: 1.5rem; /* Add some top padding */
+        }
 
         .exam-review-container {
             margin-top: 2rem;
             padding-top: 1.5rem;
             border-top: 1px dashed var(--border-color); /* Border color from theme */
             text-align: right; /* Align review questions to the right */
+            flex-grow: 1; /* Allow review container to take available space */
         }
 
         .exam-review-container h3 {
@@ -1578,8 +1591,11 @@
             cursor: pointer;
             font-size: 1rem;
             font-weight: 600;
-            margin-top: 1.5rem;
+            margin-top: auto; /* Pushes the button to the bottom */
+            margin-bottom: 1rem; /* Space from the very bottom */
             transition: background-color 0.2s ease, transform 0.1s ease;
+            width: fit-content; /* Adjust width to content */
+            align-self: center; /* Center the button horizontally */
         }
 
         .back-to-exams-button:hover {
@@ -1590,8 +1606,8 @@
             transform: scale(0.98);
         }
 
-        /* Media query for smaller screens (mobile) */
-        @media (max-width: 768px) {
+        /* Media query for smaller screens (mobile and tablets) */
+        @media (max-width: 1024px) {
             /* Override main's padding for exam-taking-section to allow it to be wider */
             main:has(#exam-taking-section.active) {
                 padding-left: 0;
@@ -1610,6 +1626,28 @@
                 margin-right: 0.5rem; /* Align with section padding */
                 box-sizing: border-box; /* Include padding in width calculation */
             }
+
+            /* Font size adjustments for tablets */
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .question-text {
+                    font-size: 1.15rem; /* Slightly larger for tablets */
+                }
+
+                .option-label span {
+                    font-size: 1.05rem; /* Slightly larger for tablets */
+                }
+
+                .exam-summary-floating .exam-result-score,
+                .exam-summary-floating .exam-result-points,
+                .exam-summary-floating .exam-result-percentage,
+                .exam-summary-floating .exam-submission-message {
+                    font-size: 1.3rem; /* Larger for tablets */
+                }
+
+                .exam-summary-floating .exam-result-title {
+                    font-size: 2.2rem; /* Larger for tablets */
+                }
+            }
         }
     </style>
 </head>
@@ -1627,6 +1665,7 @@
 
         <div class="header-left-content"> <!-- New container for RTL left side -->
             <div id="exam-timer" class="exam-timer-display"></div> <!-- Timer element -->
+            <!-- Dark Mode Toggle removed from header, now only in settings -->
             <div class="more-menu-container">
                 <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="1"></circle>
@@ -1642,7 +1681,7 @@
         </div>
     </header>
 
-    <main>
+    <main id="main"> <!-- Added id="main" for scrolling -->
         <section id="home" class="active">
             <div class="home-cards-container">
                 <a class="card summaries-card" onclick="showTab('summaries')">
@@ -1682,7 +1721,7 @@
             <div id="questions-display-container">
                 <!-- Exam questions will be rendered here dynamically -->
             </div>
-            <button id="submit-exam-button" style="display: none;">إرسال الامتحان</button>
+            <button id="submit-exam-button" style="display: none;">تسليم</button> <!-- Changed button text -->
             <!-- The exam-results div has been removed as per request -->
         </section>
 
@@ -1794,6 +1833,7 @@
 
         <section id="settings" class="">
             <h1 style="margin-bottom: 2rem;">الإعدادات</h1>
+            <!-- Dark Mode Toggle moved back here -->
             <div class="settings-item">
                 <span>الوضع الداكن</span>
                 <label class="switch">
@@ -1882,6 +1922,9 @@
 
         // Function to show main tabs
         function showTab(id) {
+            // Scroll to the top of the main content area instantly
+            document.getElementById('main').scrollTop = 0;
+
             document.querySelectorAll('section').forEach(sec => {
                 sec.classList.remove('active');
             });
