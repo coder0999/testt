@@ -627,20 +627,23 @@
             submitButton.textContent = 'تسليم'; // Reset button text to 'تسليم'
         }
 
-        // Function to handle back button from results page
-        function handleBackFromResults() {
-            if (window.currentUserId) {
-                // User is logged in, go to store
-                showTab('store');
-            } else {
-                // User is not logged in, go to profile
-                showTab('profile');
-            }
-        }
+
 
         function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, userId) {
             const questionsDisplayContainer = document.getElementById('questions-display-container');
             questionsDisplayContainer.innerHTML = ''; // Clear existing content
+
+            // Show points display in results page and set its behavior
+            const pointsDisplay = document.getElementById('points-display');
+            if (pointsDisplay) {
+                pointsDisplay.style.display = 'flex';
+                // Set click behavior based on login status
+                if (userId) {
+                    pointsDisplay.onclick = () => showTab('store');
+                } else {
+                    pointsDisplay.onclick = () => showTab('profile');
+                }
+            }
 
             let pointsHtml = '';
             // Removed submissionMessage as requested
@@ -668,11 +671,13 @@
                 <div class="exam-review-container">
                     <h3>مراجعة الامتحان:</h3>
                 </div>
-                <button class="back-to-exams-button" onclick="handleBackFromResults();">العودة</button>
+                <button class="back-to-exams-button" onclick="showTab('exams');">العودة</button>
             `;
 
             // Scroll to the top of the questionsDisplayContainer to show results from the top
             questionsDisplayContainer.scrollTop = 0;
+            // Also scroll the window to top to ensure results are visible from the beginning
+            window.scrollTo(0, 0);
 
             const reviewContainer = questionsDisplayContainer.querySelector('.exam-review-container');
 
@@ -1652,7 +1657,7 @@
         }
 
         body:has(#exam-taking-section.active) #points-display {
-            display: none; /* Hide points on exam page */
+            display: flex; /* Show points on exam page */
         }
 
         body:has(#exam-taking-section.active) #exam-timer {
@@ -1983,6 +1988,7 @@
             if (id === 'exam-taking-section') {
                 backArrow.style.display = 'block';
                 examTimerElement.style.display = 'flex';
+                pointsDisplay.style.display = 'flex'; // Show points on exam page
                 // headerBar.style.justifyContent remains 'space-between' (default)
             } else if (id === 'store') {
                 backArrow.style.display = 'block';
