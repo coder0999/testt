@@ -69,6 +69,9 @@
         // Global variable to store completed exam IDs
         let completedExamsSet = new Set();
 
+        // Array to store user's answers in real-time
+        let userAnswers = [];
+
         // Function to handle initial authentication (custom token or anonymous)
         async function authenticateUser() {
             try {
@@ -462,22 +465,43 @@
         function renderExamQuestions(questions) {
             const questionsDisplayContainer = document.getElementById('questions-display-container');
             questionsDisplayContainer.innerHTML = ''; // Clear existing questions
+            userAnswers = new Array(questions.length).fill(null); // Initialize userAnswers for this exam
 
             questions.forEach((q, qIndex) => {
                 const questionDiv = document.createElement('div');
                 questionDiv.className = 'exam-question-card';
                 questionDiv.innerHTML = `
                     <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
-                    <div class="options-container">
+                    <div class="options-container" id="options-q-${qIndex}">
                         ${q.options.map((option, optIndex) => `
                             <label class="option-label">
-                                <input type="radio" name="question-${qIndex}" value="${optIndex}" class="option-radio">
+                                <input type="radio" name="question-${qIndex}" value="${optIndex}" class="option-radio" data-question-index="${qIndex}">
                                 <span>${option}</span>
                             </label>
                         `).join('')}
                     </div>
                 `;
                 questionsDisplayContainer.appendChild(questionDiv);
+
+                // Add event listener for deselect functionality and real-time answer tracking
+                const optionsContainer = document.getElementById(`options-q-${qIndex}`);
+                optionsContainer.addEventListener('click', (event) => {
+                    const clickedRadio = event.target.closest('input[type="radio"]');
+                    if (clickedRadio) {
+                        const questionIndex = parseInt(clickedRadio.dataset.questionIndex);
+                        const selectedOptionIndex = parseInt(clickedRadio.value);
+
+                        // If the clicked radio was already checked and is now being clicked again, deselect it
+                        if (userAnswers[questionIndex] === selectedOptionIndex) {
+                            clickedRadio.checked = false; // Visually uncheck
+                            userAnswers[questionIndex] = null; // Clear answer
+                        } else {
+                            // Otherwise, it's a new selection or re-selection after deselection
+                            userAnswers[questionIndex] = selectedOptionIndex;
+                        }
+                        console.log(`Question ${questionIndex} answer: ${userAnswers[questionIndex]}`);
+                    }
+                });
             });
         }
 
@@ -534,17 +558,8 @@
             const examResultsElement = document.getElementById('exam-results');
 
             // 1. Validate all questions are answered
-            const userAnswers = [];
-            let allAnswered = true;
-            currentExamData.questions.forEach((q, qIndex) => {
-                const selectedOption = document.querySelector(`input[name="question-${qIndex}"]:checked`);
-                if (selectedOption) {
-                    userAnswers.push(parseInt(selectedOption.value));
-                } else {
-                    userAnswers.push(null); // Mark as unanswered
-                    allAnswered = false;
-                }
-            });
+            // Use the pre-populated userAnswers array
+            let allAnswered = userAnswers.every(answer => answer !== null);
 
             if (!allAnswered && submissionType === 'manual') { // Only check for manual submission
                 showMessageBox('الرجاء إنهاء جميع الأسئلة قبل التسليم!', 'error');
@@ -688,7 +703,7 @@
         :root {
             --primary-color: #007bff;
             --secondary-color: #6c757d;
-            --active-bg: #e6f2ff;
+            --active-bg: #e6f2ff; /* Light blue */
             --inactive-color: #999;
             --background-color: #ffffff;
             --text-color: #212529;
@@ -730,7 +745,7 @@
             padding: 0;
             min-height: 100vh;
             font-family: 'Cairo', sans-serif; /* Changed font to Cairo */
-            background: var(--background-color);
+            background: var(--background-color); /* Default background */
             direction: rtl;
             -webkit-tap-highlight-color: transparent;
             color: var(--text-color);
@@ -746,6 +761,23 @@
         body {
             -ms-overflow-style: none;  /* IE and Edge */
             scrollbar-width: none;  /* Firefox */
+        }
+
+        /* Set background for exam-taking-section to light blue */
+        #exam-taking-section {
+            background-color: var(--active-bg); /* Light blue background for the entire section */
+            min-height: calc(100vh - 50px); /* Fill remaining height */
+            padding-top: 2rem; /* Adjusted padding for content */
+            padding-bottom: 2rem;
+            box-sizing: border-box; /* Include padding in height calculation */
+        }
+
+        /* Ensure main content background is light blue when exam-taking-section is active */
+        main {
+            background-color: var(--background-color); /* Default background */
+        }
+        main:has(#exam-taking-section.active) {
+            background-color: var(--active-bg); /* Override main background when exam section is active */
         }
 
 
@@ -815,7 +847,7 @@
             padding: 2rem 1.25rem;
             padding-bottom: 80px;
             text-align: center;
-            background-color: var(--background-color);
+            /* background-color: var(--background-color); Removed, handled by :has or section specific */
             min-height: calc(100vh - 70px - 50px);
             padding-top: calc(50px + 2rem);
             transition: background-color 0.3s ease;
@@ -1375,16 +1407,16 @@
 
 
         .exam-question-card {
-            background-color: var(--background-color);
+            background-color: var(--background-color); /* Card background */
             border-radius: 12px;
             box-shadow: 0 4px 12px var(--card-shadow);
-            padding: 1.8rem; /* Increased padding for all devices */
-            margin-bottom: 1.8rem; /* Increased margin for all devices */
+            padding: 1.5rem; /* Consistent padding for all devices */
+            margin-bottom: 1.5rem; /* Consistent margin for all devices */
             border: 1px solid var(--border-color);
         }
 
         .question-text {
-            font-size: 1.05rem; /* Slightly smaller font size for question text for all devices */
+            font-size: 1.05rem; /* Consistent font size for question text for all devices */
             color: var(--text-color);
             margin-bottom: 1rem;
             line-height: 1.6;
@@ -1416,10 +1448,11 @@
             margin-left: 0.75rem; /* Space between radio and text */
             transform: scale(1.2); /* Slightly larger radio button */
             cursor: pointer;
+            accent-color: var(--primary-color); /* Blue circle by default */
         }
 
         .option-label span {
-            font-size: 0.95rem; /* Slightly smaller font size for options for all devices */
+            font-size: 0.95rem; /* Consistent font size for options for all devices */
             color: var(--text-color);
             flex-grow: 1; /* Allow text to take available space */
         }
@@ -1451,30 +1484,33 @@
         }
 
         #exam-results {
-            background-color: var(--primary-color); /* Changed to primary blue */
+            background-color: var(--background-color); /* Result card background is now white/dark grey */
             padding: 2rem;
             border-radius: 12px;
             margin-top: 2rem;
             box-shadow: 0 4px 12px var(--card-shadow);
             text-align: center;
-            color: white; /* Text color for results section */
+            color: var(--text-color); /* Text color for results section */
         }
 
-        #exam-results .exam-result-title,
+        #exam-results .exam-result-title {
+            color: var(--primary-color); /* Ensure title is primary color */
+        }
+
         #exam-results .exam-result-score,
         #exam-results .exam-result-points,
         #exam-results .exam-result-percentage,
         #exam-results .exam-submission-message,
         #exam-results .exam-review-container h3 {
-            color: white; /* Ensure all text within results section is white */
+            color: var(--text-color); /* Ensure all text within results section is theme text color */
         }
 
         /* Special handling for points-not-counted text within results */
         #exam-results .points-not-counted {
-            color: rgba(255, 255, 255, 0.8); /* Lighter white for this specific text */
+            color: var(--secondary-color); /* Secondary color for this specific text */
         }
         #exam-results .points-not-counted span {
-             color: var(--incorrect-answer-bg); /* Use a light red from theme for strike-through */
+             color: var(--incorrect-answer-border); /* Use a light red from theme for strike-through */
         }
 
 
@@ -1498,7 +1534,7 @@
         .exam-review-container {
             margin-top: 2rem;
             padding-top: 1.5rem;
-            border-top: 1px dashed rgba(255, 255, 255, 0.5); /* White dashed border for review */
+            border-top: 1px dashed var(--border-color); /* Border color from theme */
             text-align: right; /* Align review questions to the right */
         }
 
@@ -1508,31 +1544,31 @@
             text-align: center;
         }
 
-        /* Styles for correct and incorrect answers in review mode within the blue background */
+        /* Styles for correct and incorrect answers in review mode within the white/dark grey background */
         #exam-results .option-label.correct-answer {
-            background-color: rgba(40, 167, 69, 0.8); /* Green with transparency */
-            border-color: white; /* White border for contrast */
-            color: white;
+            background-color: var(--correct-answer-bg); /* Green from theme */
+            border-color: var(--correct-answer-border); /* Green border from theme */
+            color: var(--text-color); /* Text color from theme */
         }
 
         #exam-results .option-label.user-incorrect-answer {
-            background-color: rgba(220, 53, 69, 0.8); /* Red with transparency */
-            border-color: white; /* White border for contrast */
-            color: white;
+            background-color: var(--incorrect-answer-bg); /* Red from theme */
+            border-color: var(--incorrect-answer-border); /* Red border from theme */
+            color: var(--text-color); /* Text color from theme */
         }
 
         #exam-results .option-label {
-            background-color: rgba(255, 255, 255, 0.1); /* Light transparent background for options */
-            color: white; /* White text for options */
-            border-color: rgba(255, 255, 255, 0.3); /* Lighter border */
+            background-color: var(--active-bg); /* Light blue background for options */
+            color: var(--text-color); /* Text color from theme */
+            border-color: var(--border-color); /* Border color from theme */
         }
 
         #exam-results .option-label span {
-            color: white; /* Ensure option text is white */
+            color: var(--text-color); /* Ensure option text is theme text color */
         }
 
         #exam-results .option-radio {
-            accent-color: white; /* Make radio button white */
+            accent-color: var(--primary-color); /* Make radio button primary color */
         }
 
         .back-to-exams-button {
@@ -1597,7 +1633,7 @@
                     <p class="card-description">جميع ملخصات المواد بملحقاتها</p>
                     <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                         <line x1="10" y1="6" x2="16" y2="6"></line>
                         <line x1="10" y1="10" x2="16" y2="10"></line>
                         <line x1="10" y1="14" x2="16" y2="14"></line>
@@ -1969,7 +2005,7 @@
                         }
                     } else {
                         console.log('User dismissed the A2HS prompt');
-                        installEmojiSpan.textContent = '�'; // Revert to download emoji
+                        installEmojiSpan.textContent = '📥'; // Revert to download emoji
                         installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
                     }
                     deferredPrompt = null; // Clear the deferredPrompt
