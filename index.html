@@ -106,6 +106,7 @@
                 completedExamsSet.clear(); // Clear completed exams if logged out
                 loadExams(); // Still load exams even if not logged in (public data, no filtering)
             }
+            updatePointsDisplayClickHandler(); // Update click handler based on auth state
         });
 
         // Call authentication on page load to establish initial state
@@ -1659,7 +1660,7 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
-            <div class="points-display" id="points-display" onclick="showTab('store')"></div>
+            <div class="points-display" id="points-display"></div> <!-- Removed onclick here, it's set dynamically -->
         </div>
         <div id="exam-timer" class="exam-timer-display" style="display: none;"></div> <!-- Moved here -->
         <div class="header-end-elements"> <!-- For more-menu -->
@@ -1942,41 +1943,46 @@
             }
 
             const navBar = document.querySelector('.bottom-nav');
-            const headerBar = document.getElementById('header-bar'); // Get header bar
+            const headerBar = document.getElementById('header-bar');
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
             const examTimerElement = document.getElementById('exam-timer');
 
-            // Always reset header bar to default layout first
-            headerBar.style.justifyContent = 'space-between'; // Default layout for header
-            pointsDisplay.style.display = 'flex'; // Default visible
-            moreMenuContainer.style.display = 'block'; // Default visible
-            examTimerElement.style.display = 'none'; // Default hidden
-            backArrow.style.display = 'none'; // Default hidden
+            // Reset all header elements to default hidden
+            backArrow.style.display = 'none';
+            pointsDisplay.style.display = 'none';
+            moreMenuContainer.style.display = 'none';
+            examTimerElement.style.display = 'none';
 
-            const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
-
-            if (isChildPage) {
-                navBar.style.display = 'none'; // Hide bottom nav for child pages
-                backArrow.style.display = 'block'; // Show back arrow for all child pages
-                pointsDisplay.style.display = 'none'; // Hide points for all child pages
-                moreMenuContainer.style.display = 'none'; // Hide more menu for all child pages
-
-                if (id === 'exam-taking-section') {
-                    examTimerElement.style.display = 'flex'; // Show timer only for exam
-                    // headerBar.style.justifyContent remains 'space-between' (default)
-                    // This will put back arrow on right, timer in middle, and empty space on left
-                } else {
-                    // For other child pages (profile, settings, store, summaries, notifications)
-                    // backArrow is already block, points/moreMenu/timer are already none
-                    // headerBar.style.justifyContent remains 'space-between', so back arrow is on right.
-                }
+            // Set bottom nav visibility
+            if (['home', 'exams', 'reviews'].includes(id)) {
+                navBar.style.display = 'flex';
             } else {
-                // For main tabs (home, exams, reviews)
-                navBar.style.display = 'flex'; // Show bottom nav
-                // All other header elements are already set to their defaults (points/moreMenu visible, backArrow/timer hidden)
+                navBar.style.display = 'none';
             }
+
+            // Set header elements visibility based on the current tab
+            if (id === 'exam-taking-section') {
+                backArrow.style.display = 'block';
+                examTimerElement.style.display = 'flex';
+                // headerBar.style.justifyContent remains 'space-between' (default)
+            } else if (id === 'store') {
+                backArrow.style.display = 'block';
+                pointsDisplay.style.display = 'flex'; // Show points on store page
+                // headerBar.style.justifyContent remains 'space-between' (default)
+            } else if (['profile', 'settings', 'notifications', 'summaries'].includes(id)) {
+                backArrow.style.display = 'block';
+                // pointsDisplay and moreMenuContainer remain hidden
+                // headerBar.style.justifyContent remains 'space-between' (default)
+            } else { // Home, Exams, Reviews (main tabs)
+                pointsDisplay.style.display = 'flex';
+                moreMenuContainer.style.display = 'block';
+                // headerBar.style.justifyContent remains 'space-between' (default)
+            }
+
+            // Update points display click handler based on login status
+            updatePointsDisplayClickHandler();
 
             // If navigating to summaries, ensure the first subject tab is active
             if (id === 'summaries') {
@@ -2003,34 +2009,15 @@
             }
         }
 
-        // Function to toggle the more menu dropdown
-        function toggleMoreMenu() {
-            const dropdown = document.getElementById('more-menu-dropdown');
-            dropdown.classList.toggle('active');
-        }
-
-        // Function to show content for a specific subject tab
-        function showSubjectContent(subjectId) {
-            // Deactivate all subject tabs
-            document.querySelectorAll('.subject-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Activate the clicked subject tab
-            const activeTab = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
-            if (activeTab) {
-                activeTab.classList.add('active');
-            }
-
-            // Hide all subject content divs
-            document.querySelectorAll('.subject-content').forEach(contentDiv => {
-                contentDiv.style.display = 'none';
-            });
-
-            // Show the content div for the active subject
-            const contentToShow = document.getElementById(`${subjectId}-content`);
-            if (contentToShow) {
-                contentToShow.style.display = 'block';
+        // New function to handle the click behavior of points display
+        function updatePointsDisplayClickHandler() {
+            const pointsDisplay = document.getElementById('points-display');
+            if (pointsDisplay) {
+                if (window.currentUserId) {
+                    pointsDisplay.onclick = () => showTab('store');
+                } else {
+                    pointsDisplay.onclick = () => showTab('profile');
+                }
             }
         }
 
