@@ -660,6 +660,9 @@
                 <button class="back-to-exams-button" onclick="showTab('exams');">العودة</button>
             `;
 
+            // Scroll to the top of the questionsDisplayContainer to show results from the top
+            questionsDisplayContainer.scrollTop = 0;
+
             const reviewContainer = questionsDisplayContainer.querySelector('.exam-review-container');
 
             examData.questions.forEach((q, qIndex) => {
@@ -808,7 +811,7 @@
         .header-right-icons {
             display: flex;
             align-items: center;
-            gap: 1rem; /* Space between back arrow and points */
+            gap: 0.5rem; /* Reduced gap for closer elements */
         }
 
         .header-left-content {
@@ -823,12 +826,13 @@
             height: 24px;
             color: var(--primary-color);
             cursor: pointer;
-            /* Positioning for the edge */
-            position: absolute; /* Absolute position within the header */
-            right: 1.25rem; /* Aligned with header padding */
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 1001; /* Ensure it's above other header content if needed */
+            /* Removed absolute positioning */
+            /* Now part of flex layout */
+            transition: transform 0.1s ease-in-out;
+        }
+
+        #back-arrow:active {
+            transform: scale(0.9);
         }
 
         .points-display {
@@ -838,7 +842,7 @@
             border-radius: 0.75rem;
             font-weight: 600;
             font-size: 0.8rem;
-            margin-left: 1rem;
+            /* Removed margin-left: 1rem; as gap handles spacing */
             display: flex; /* Always flex for styling */
             align-items: center;
             justify-content: center;
@@ -1417,7 +1421,7 @@
             align-items: center; /* Center content vertically */
             justify-content: center; /* Center content horizontally */
             transition: background-color 0.3s ease, color 0.3s ease;
-            margin-right: 0.5rem; /* Added margin to push it slightly right in RTL */
+            margin-right: 1rem; /* Increased margin to push it slightly right in RTL */
         }
 
         .exam-timer-display.timer-warning {
@@ -1616,15 +1620,15 @@
             }
 
             #exam-taking-section {
-                padding-left: 0.5rem; /* Small padding on left */
-                padding-right: 0.5rem; /* Small padding on right */
+                padding-left: 0; /* Removed padding for full width */
+                padding-right: 0; /* Removed padding for full width */
                 max-width: 100%; /* Ensure it spans full width */
             }
 
             .exam-question-card {
-                width: calc(100% - 1rem); /* 100% of parent width minus 0.5rem padding on each side of parent */
-                margin-left: 0.5rem; /* Align with section padding */
-                margin-right: 0.5rem; /* Align with section padding */
+                width: calc(100% - 2rem); /* Adjust width to account for 1rem padding on each side */
+                margin-left: 1rem; /* Add 1rem margin to align with section padding */
+                margin-right: 1rem; /* Add 1rem margin to align with section padding */
                 box-sizing: border-box; /* Include padding in width calculation */
             }
 
@@ -1952,14 +1956,11 @@
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
                 moreMenuContainer.style.display = 'none';
-                pointsDisplay.style.display = 'none'; // Hide points display on child pages by default
+                pointsDisplay.style.display = 'flex'; // Keep points display visible
+                pointsDisplay.style.marginRight = '0.5rem'; // Adjust margin to be next to arrow
 
                 if (id === 'exam-taking-section') {
                     examTimerElement.style.display = 'flex'; // Show timer on exam page
-                    // Points display remains hidden
-                } else if (id === 'store') {
-                    pointsDisplay.style.display = 'flex'; // Show points on store page
-                    examTimerElement.style.display = 'none'; // Hide timer on store page
                 } else {
                     examTimerElement.style.display = 'none'; // Hide timer on other child pages
                 }
@@ -1967,6 +1968,7 @@
                 navBar.style.display = 'flex';
                 backArrow.style.display = 'none';
                 pointsDisplay.style.display = 'flex';
+                pointsDisplay.style.marginRight = '0'; // Reset margin for main tabs
                 moreMenuContainer.style.display = 'block';
                 examTimerElement.style.display = 'none'; // Hide timer on main tabs
             }
