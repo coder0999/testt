@@ -1135,6 +1135,10 @@
             transform: scale(0.9);
         }
 
+        #more-menu-icon.active {
+            color: var(--primary-color);
+        }
+
         #more-menu-dropdown {
             display: none;
             position: absolute;
@@ -2032,6 +2036,17 @@
             }
         }
 
+        // Function to toggle more menu
+        function toggleMoreMenu() {
+            const dropdown = document.getElementById('more-menu-dropdown');
+            const moreMenuIcon = document.getElementById('more-menu-icon');
+            
+            if (dropdown && moreMenuIcon) {
+                dropdown.classList.toggle('active');
+                moreMenuIcon.classList.toggle('active');
+            }
+        }
+
         // New function to handle the click behavior of points display
         function updatePointsDisplayClickHandler() {
             const pointsDisplay = document.getElementById('points-display');
@@ -2120,28 +2135,9 @@
         }
 
 
-        // Event listeners for header bar
-        document.getElementById('more-menu-icon').addEventListener('click', (event) => {
-            event.stopPropagation();
-            toggleMoreMenu();
-        });
 
-        document.addEventListener('click', (event) => {
-            const dropdown = document.getElementById('more-menu-dropdown');
-            const moreMenuIcon = document.getElementById('more-menu-icon');
-            if (!dropdown.contains(event.target) && !moreMenuIcon.contains(event.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
 
-        document.getElementById('back-arrow').addEventListener('click', () => {
-            // If currently in exam-taking section, go back to exams list
-            if (document.getElementById('exam-taking-section').classList.contains('active')) {
-                showTab('exams');
-            } else {
-                showTab('home');
-            }
-        });
+
 
         // Swipe functionality for subject content area
         let startX = 0;
@@ -2150,6 +2146,37 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             showTab('home'); // Show home tab by default
+
+            // Event listeners for header bar
+            const moreMenuIcon = document.getElementById('more-menu-icon');
+            const dropdown = document.getElementById('more-menu-dropdown');
+            
+            if (moreMenuIcon) {
+                moreMenuIcon.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    toggleMoreMenu();
+                });
+            }
+
+            document.addEventListener('click', (event) => {
+                if (dropdown && moreMenuIcon && !dropdown.contains(event.target) && !moreMenuIcon.contains(event.target)) {
+                    dropdown.classList.remove('active');
+                    moreMenuIcon.classList.remove('active');
+                }
+            });
+
+            // Back arrow event listener
+            const backArrow = document.getElementById('back-arrow');
+            if (backArrow) {
+                backArrow.addEventListener('click', () => {
+                    // If currently in exam-taking section, go back to exams list
+                    if (document.getElementById('exam-taking-section').classList.contains('active')) {
+                        showTab('exams');
+                    } else {
+                        showTab('home');
+                    }
+                });
+            }
 
             const darkModeToggle = document.getElementById('dark-mode-toggle');
             const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
