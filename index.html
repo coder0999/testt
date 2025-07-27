@@ -570,11 +570,13 @@
                 }
 
             } else {
+                // User is not logged in, points are not added to their profile
                 showMessageBox('الرجاء تسجيل الدخول لحفظ نقاطك.', 'info');
             }
 
             // 3. Display results and review
-            displayExamResults(currentExamData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp);
+            // Pass currentUserId to displayExamResults to handle conditional display of points
+            displayExamResults(currentExamData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp, window.currentUserId);
 
             // Hide questions and submit button
             questionsDisplayContainer.style.display = 'none';
@@ -586,13 +588,27 @@
             submitButton.textContent = 'إرسال الامتحان'; // Reset button text
         }
 
-        function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp) {
+        function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, timeUp, userId) {
             const examResultsElement = document.getElementById('exam-results');
+            let pointsHtml = '';
+
+            if (userId) {
+                pointsHtml = `<p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>`;
+            } else {
+                pointsHtml = `
+                    <p class="exam-result-points points-not-counted">
+                        <span style="text-decoration: line-through; color: var(--incorrect-answer-border);">${pointsEarned} نقطة</span>
+                        <br>
+                        يلزم تسجيل الدخول لاحتساب النقاط.
+                    </p>
+                `;
+            }
+
             examResultsElement.innerHTML = `
                 <h2 class="exam-result-title">نتيجتك:</h2>
                 <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
                 <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
-                <p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>
+                ${pointsHtml}
                 ${timeUp ? '<p class="exam-result-time-up">انتهى الوقت، تم إرسال إجاباتك تلقائيًا.</p>' : ''}
                 <div class="exam-review-container">
                     <h3>مراجعة الامتحان:</h3>
@@ -1863,7 +1879,7 @@
         async function installApp() {
             const installEmojiSpan = document.getElementById('install-emoji');
             if (installEmojiSpan) {
-                installEmojiSpan.textContent = '�'; // Spinner emoji
+                installEmojiSpan.textContent = '🔄'; // Spinner emoji
                 installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
 
                 if (deferredPrompt) {
