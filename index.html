@@ -1528,114 +1528,46 @@
         /* Responsive adjustments for phones (max-width: 767px) */
         @media (max-width: 767px) {
             .exam-question-card {
-                padding: 1rem; /* Smaller padding for phones */
-                margin-bottom: 1rem; /* Smaller margin for phones */
+                padding: 1.2rem; /* Slightly larger padding for phones */
+                margin-bottom: 1.2rem; /* Slightly larger margin for phones */
             }
 
             .question-text {
-                font-size: 1rem; /* Smaller font size for question text */
+                font-size: 0.95rem; /* Smaller font size for question text */
             }
 
             .option-label span {
-                font-size: 0.9rem; /* Smaller font size for options */
+                font-size: 0.85rem; /* Smaller font size for options */
             }
 
             #submit-exam-button {
-                padding: 0.8rem 1.5rem; /* Smaller padding for button */
-                font-size: 1rem; /* Smaller font size for button */
+                padding: 0.9rem 1.8rem; /* Adjusted padding for button */
+                font-size: 1.05rem; /* Adjusted font size for button */
             }
 
             #exam-results {
-                padding: 1.5rem; /* Smaller padding for results */
+                padding: 1.8rem; /* Adjusted padding for results */
             }
 
             .exam-result-title {
-                font-size: 1.5rem; /* Smaller font size for result title */
+                font-size: 1.8rem; /* Adjusted font size for result title */
             }
 
             .exam-result-score, .exam-result-points, .exam-result-time-up, .exam-result-percentage {
-                font-size: 1rem; /* Smaller font size for result text */
+                font-size: 1.1rem; /* Adjusted font size for result text */
             }
 
             .exam-submission-message {
-                font-size: 1.1rem; /* Smaller font size for submission message */
+                font-size: 1.2rem; /* Adjusted font size for submission message */
             }
 
             .exam-review-container h3 {
-                font-size: 1.2rem; /* Smaller font size for review title */
+                font-size: 1.4rem; /* Adjusted font size for review title */
             }
         }
 
-        /* Responsive adjustments for tablets (min-width: 768px) */
-        @media (min-width: 768px) {
-            body {
-                display: flex; /* Use flexbox for main layout */
-                flex-direction: row-reverse; /* RTL layout: header on top, nav on right */
-                overflow: hidden; /* Prevent body scroll, main will scroll */
-            }
-
-            #header-bar {
-                position: static; /* No longer fixed for tablet layout */
-                width: auto; /* Allow width to adjust */
-                flex-shrink: 0; /* Prevent shrinking */
-                border-bottom: none; /* Remove bottom border */
-                box-shadow: none; /* Remove shadow */
-                padding: 0 1.25rem; /* Keep original padding */
-                height: 50px; /* Keep original height */
-                display: flex; /* Ensure it remains flex */
-                justify-content: space-between; /* Space out items */
-                align-items: center; /* Center items vertically */
-                width: 100%; /* Take full width */
-            }
-
-            .bottom-nav {
-                position: fixed; /* Keep fixed for vertical nav */
-                top: 50px; /* Below the header bar */
-                right: 0; /* Align to the right */
-                width: 80px; /* Narrower width for vertical nav */
-                height: calc(100vh - 50px); /* Full height minus header */
-                flex-direction: column; /* Vertical layout */
-                justify-content: flex-start; /* Align items to the top */
-                padding-top: 1rem; /* Add some top padding */
-                border-top: none; /* Remove top border */
-                border-right: 1px solid var(--border-color); /* Add right border */
-                border-top-left-radius: 0;
-                border-top-right-radius: 0;
-                border-bottom-left-radius: 0;
-                border-bottom-right-radius: 0;
-                box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05); /* Shadow on the left side */
-                display: flex; /* Ensure it's flex */
-            }
-
-            .bottom-nav button {
-                width: 100%; /* Full width within the narrow nav */
-                padding: 12px 0; /* Adjust padding for vertical layout */
-                margin-bottom: 0.5rem; /* Space between buttons */
-            }
-
-            .bottom-nav button .icon-container {
-                padding: 8px; /* Adjust icon container padding */
-            }
-
-            main {
-                flex-grow: 1; /* Take remaining space */
-                margin-right: 80px; /* Make space for the vertical nav */
-                padding-top: 2rem; /* Adjust top padding as header is no longer fixed */
-                overflow-y: auto; /* Allow main content to scroll */
-                height: calc(100vh - 50px); /* Adjust height to fill space */
-            }
-
-            /* Ensure main sections are not hidden by the nav bar */
-            #home, #exams, #exam-taking-section, #reviews, #profile, #store, #summaries, #settings, #notifications {
-                padding-right: 1.25rem; /* Original padding */
-                padding-left: 1.25rem; /* Original padding */
-            }
-
-            /* Adjust the display of the nav bar when a child page is active */
-            body.child-page .bottom-nav {
-                display: none; /* Hide vertical nav on child pages too */
-            }
-        }
+        /* No specific tablet layout, keeping phone layout for all smaller screens */
+        /* The previous @media (min-width: 768px) block is removed */
     </style>
 </head>
 <body class="">
@@ -1931,14 +1863,6 @@
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
-            // Add/remove 'child-page' class to body for global layout adjustments
-            if (isChildPage) {
-                document.body.classList.add('child-page');
-            } else {
-                document.body.classList.remove('child-page');
-            }
-
-
             if (isChildPage) {
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
@@ -2039,7 +1963,7 @@
         async function installApp() {
             const installEmojiSpan = document.getElementById('install-emoji');
             if (installEmojiSpan) {
-                installEmojiSpan.textContent = '🔄'; // Spinner emoji
+                installEmojiSpan.textContent = '�'; // Spinner emoji
                 installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
 
                 if (deferredPrompt) {
