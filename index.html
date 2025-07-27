@@ -24,7 +24,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        // Import collection and onSnapshot for listening to real-time updates
+        // Import collection and onSnapshot for listening to real-time updates, and getDoc for fetching single documents
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // Firebase Configuration:
@@ -58,6 +58,12 @@
         window.currentUserId = null;
         window.currentPoints = 0;
         let isAuthReady = false; // Flag to ensure Firestore operations wait for auth state to be known
+
+        // Global variables for exam state
+        let currentExamData = null;
+        let examTimerInterval = null;
+        let examDurationSeconds = 0;
+        let examStartTime = 0;
 
         // Function to handle initial authentication (custom token or anonymous)
         async function authenticateUser() {
@@ -318,9 +324,7 @@
                 document.querySelectorAll('.exam-start-button').forEach(button => {
                     button.addEventListener('click', (event) => {
                         const examId = event.target.dataset.examId;
-                        // Here you would navigate to the exam taking page, passing the examId
-                        console.log(`Starting exam with ID: ${examId}`);
-                        alert(`سيتم بدء اختبار: ${examId}\n(هذه مجرد رسالة تنبيه، ستحتاج إلى بناء صفحة الاختبار الفعلية)`);
+                        startExam(examId); // Call the new startExam function
                     });
                 });
             }, (error) => {
@@ -328,6 +332,186 @@
                 examsContainer.innerHTML = '<p class="text-red-500">حدث خطأ أثناء تحميل الامتحانات.</p>';
             });
         };
+
+        // Function to display messages to the user (replacement for alert)
+        function showMessageBox(message, type = 'info') {
+            const messageBox = document.getElementById('custom-message-box');
+            if (!messageBox) {
+                console.error('Message box element not found.');
+                return;
+            }
+
+            messageBox.textContent = message;
+            messageBox.className = 'custom-message-box'; // Reset classes
+            if (type === 'success') {
+                messageBox.classList.add('success');
+            } else if (type === 'error') {
+                messageBox.classList.add('error');
+            } else {
+                messageBox.classList.add('info');
+            }
+            messageBox.style.display = 'block';
+            messageBox.style.opacity = '1';
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                messageBox.style.opacity = '0';
+                setTimeout(() => {
+                    messageBox.style.display = 'none';
+                }, 500); // Wait for fade out transition
+            }, 3000);
+        }
+
+        // --- Exam Taking Logic ---
+        async function startExam(examId) {
+            if (!window.firebaseDb) {
+                showMessageBox('خطأ: لم يتم تهيئة قاعدة البيانات.', 'error');
+                return;
+            }
+            if (!window.currentUserId) {
+                showMessageBox('الرجاء تسجيل الدخول لبدء الامتحان.', 'error');
+                return;
+            }
+
+            // Hide all sections and show exam taking section
+            showTab('exam-taking-section'); // This will handle hiding other sections
+
+            const examTitleElement = document.getElementById('exam-taking-title');
+            const examTimerElement = document.getElementById('exam-timer');
+            const questionsDisplayContainer = document.getElementById('questions-display-container');
+            const submitExamButton = document.getElementById('submit-exam-button');
+            const examResultsElement = document.getElementById('exam-results');
+
+            examTitleElement.textContent = 'جاري تحميل الامتحان...';
+            examTimerElement.textContent = '';
+            questionsDisplayContainer.innerHTML = '<div class="loading-indicator">جاري تحميل الأسئلة...</div>';
+            submitExamButton.style.display = 'none';
+            examResultsElement.innerHTML = ''; // Clear previous results
+
+            try {
+                const examDocRef = doc(window.firebaseDb, `artifacts/${appId}/public/data/exams`, examId);
+                const docSnap = await getDoc(examDocRef);
+
+                if (docSnap.exists()) {
+                    currentExamData = docSnap.data();
+                    currentExamData.id = docSnap.id; // Store exam ID
+                    examTitleElement.textContent = `اختبار: ${currentExamData.name}`;
+
+                    renderExamQuestions(currentExamData.questions);
+                    startTimer(currentExamData.duration); // Duration in minutes
+                    submitExamButton.style.display = 'block';
+                    submitExamButton.onclick = submitExam; // Attach submit handler
+
+                } else {
+                    showMessageBox('الامتحان غير موجود.', 'error');
+                    showTab('exams'); // Go back to exams list
+                }
+            } catch (error) {
+                console.error('Error loading exam:', error);
+                showMessageBox('حدث خطأ أثناء تحميل الامتحان.', 'error');
+                showTab('exams'); // Go back to exams list
+            }
+        }
+
+        function renderExamQuestions(questions) {
+            const questionsDisplayContainer = document.getElementById('questions-display-container');
+            questionsDisplayContainer.innerHTML = ''; // Clear existing questions
+
+            questions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'exam-question-card';
+                questionDiv.innerHTML = `
+                    <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
+                    <div class="options-container">
+                        ${q.options.map((option, optIndex) => `
+                            <label class="option-label">
+                                <input type="radio" name="question-${qIndex}" value="${optIndex}" class="option-radio">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                questionsDisplayContainer.appendChild(questionDiv);
+            });
+        }
+
+        function startTimer(durationMinutes) {
+            examDurationSeconds = durationMinutes * 60;
+            examStartTime = Date.now();
+            const examTimerElement = document.getElementById('exam-timer');
+
+            // Clear any existing timer to prevent multiple timers running
+            if (examTimerInterval) {
+                clearInterval(examTimerInterval);
+            }
+
+            examTimerInterval = setInterval(() => {
+                const elapsedTime = Math.floor((Date.now() - examStartTime) / 1000);
+                const remainingTime = examDurationSeconds - elapsedTime;
+
+                if (remainingTime <= 0) {
+                    clearInterval(examTimerInterval);
+                    examTimerElement.textContent = 'انتهى الوقت!';
+                    submitExam(true); // Submit automatically when time runs out
+                    return;
+                }
+
+                const minutes = Math.floor(remainingTime / 60);
+                const seconds = remainingTime % 60;
+                examTimerElement.textContent = `الوقت المتبقي: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        async function submitExam(timeUp = false) {
+            if (examTimerInterval) {
+                clearInterval(examTimerInterval);
+            }
+
+            const submitButton = document.getElementById('submit-exam-button');
+            submitButton.disabled = true; // Prevent multiple submissions
+            submitButton.textContent = 'جاري الإرسال...';
+
+            const examResultsElement = document.getElementById('exam-results');
+            examResultsElement.innerHTML = '<div class="loading-indicator">جاري حساب النتيجة...</div>';
+
+            let correctAnswersCount = 0;
+            const totalQuestions = currentExamData.questions.length;
+
+            currentExamData.questions.forEach((q, qIndex) => {
+                const selectedOption = document.querySelector(`input[name="question-${qIndex}"]:checked`);
+                if (selectedOption && parseInt(selectedOption.value) === q.correctOptionIndex) {
+                    correctAnswersCount++;
+                }
+            });
+
+            const score = correctAnswersCount;
+            const pointsEarned = correctAnswersCount * 10; // Example: 10 points per correct answer
+
+            // Update user points in Firestore
+            if (window.currentUserId) {
+                await window.updatePoints(window.currentPoints + pointsEarned);
+                showMessageBox(`تم إضافة ${pointsEarned} نقطة إلى رصيدك!`, 'success');
+            } else {
+                showMessageBox('الرجاء تسجيل الدخول لحفظ نقاطك.', 'info');
+            }
+
+            examResultsElement.innerHTML = `
+                <h2 class="exam-result-title">نتيجتك:</h2>
+                <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
+                <p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>
+                ${timeUp ? '<p class="exam-result-time-up">انتهى الوقت، تم إرسال إجاباتك تلقائيًا.</p>' : ''}
+                <button class="back-to-exams-button" onclick="showTab('exams');">العودة إلى الامتحانات</button>
+            `;
+
+            // Hide questions and submit button
+            document.getElementById('questions-display-container').style.display = 'none';
+            document.getElementById('submit-exam-button').style.display = 'none';
+            document.getElementById('exam-timer').style.display = 'none';
+            document.getElementById('exam-taking-title').style.display = 'none';
+
+            submitButton.disabled = false;
+            submitButton.textContent = 'إرسال الامتحان'; // Reset button text
+        }
 
 
     </script>
@@ -927,6 +1111,185 @@
             padding: 2rem;
         }
 
+        /* Custom Message Box */
+        .custom-message-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10000; /* Ensure it's on top */
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            font-size: 0.9rem;
+            font-family: 'Cairo', sans-serif;
+            text-align: right;
+        }
+
+        .custom-message-box.info {
+            background-color: #e0f7fa;
+            color: #006064;
+        }
+
+        .custom-message-box.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .custom-message-box.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        /* Exam Taking Section Styles */
+        #exam-taking-section {
+            padding: 1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: right;
+        }
+
+        #exam-taking-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        #exam-timer {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #d32f2f; /* Red for timer */
+            background-color: #ffebee;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .exam-question-card {
+            background-color: var(--background-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px var(--card-shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .question-text {
+            font-size: 1.15rem;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            background-color: var(--active-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .option-label:hover {
+            background-color: #dbeafe; /* Light blue on hover */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .option-radio {
+            margin-left: 0.75rem; /* Space between radio and text */
+            transform: scale(1.2); /* Slightly larger radio button */
+            cursor: pointer;
+        }
+
+        .option-label span {
+            font-size: 1rem;
+            color: var(--text-color);
+            flex-grow: 1; /* Allow text to take available space */
+        }
+
+        #submit-exam-button {
+            background-color: #007bff; /* Primary blue */
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            width: 100%;
+            max-width: 300px; /* Limit width */
+            margin-left: auto; /* Center button */
+            margin-right: auto; /* Center button */
+            display: block; /* Ensure it's a block element for centering */
+        }
+
+        #submit-exam-button:hover {
+            background-color: #0056b3;
+        }
+
+        #submit-exam-button:active {
+            transform: scale(0.98);
+        }
+
+        #exam-results {
+            background-color: var(--active-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+            box-shadow: 0 4px 12px var(--card-shadow);
+            text-align: center;
+        }
+
+        .exam-result-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .exam-result-score, .exam-result-points, .exam-result-time-up {
+            font-size: 1.2rem;
+            color: var(--text-color);
+            margin-bottom: 0.75rem;
+        }
+
+        .back-to-exams-button {
+            background-color: #6c757d; /* Secondary grey */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .back-to-exams-button:hover {
+            background-color: #5a6268;
+        }
+
+        .back-to-exams-button:active {
+            transform: scale(0.98);
+        }
+
     </style>
 </head>
 <body class="">
@@ -985,6 +1348,19 @@
             <div id="exams-cards-container" class="exams-grid-container">
                 <!-- Exam cards will be loaded here dynamically -->
                 <div class="loading-indicator">جاري تحميل الامتحانات...</div>
+            </div>
+        </section>
+
+        <!-- New Section for Exam Taking -->
+        <section id="exam-taking-section" class="">
+            <h1 id="exam-taking-title"></h1>
+            <div id="exam-timer"></div>
+            <div id="questions-display-container">
+                <!-- Exam questions will be rendered here dynamically -->
+            </div>
+            <button id="submit-exam-button" style="display: none;">إرسال الامتحان</button>
+            <div id="exam-results">
+                <!-- Exam results will be displayed here -->
             </div>
         </section>
 
@@ -1152,6 +1528,9 @@
         </button>
     </nav>
 
+    <!-- Custom Message Box -->
+    <div id="custom-message-box" class="custom-message-box"></div>
+
     <script>
         let deferredPrompt; // To store the beforeinstallprompt event
 
@@ -1171,15 +1550,7 @@
         async function addPoints(amount) {
             if (!window.currentUserId) {
                 console.warn('Cannot add points: User not logged in.');
-                const pointsDisplayElement = document.getElementById('points-display');
-                if (pointsDisplayElement) {
-                    pointsDisplayElement.textContent = 'الرجاء تسجيل الدخول لإضافة نقاط!';
-                    pointsDisplayElement.style.backgroundColor = '#dc3545'; // Red background for error
-                    setTimeout(() => {
-                        updatePointsDisplay(); // Revert after a short delay
-                        pointsDisplayElement.style.backgroundColor = 'var(--active-bg)';
-                    }, 3000); // Give user more time to read the message
-                }
+                showMessageBox('الرجاء تسجيل الدخول لإضافة نقاط!', 'error');
                 return;
             }
             const newTotalPoints = window.currentPoints + amount;
@@ -1208,7 +1579,7 @@
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
 
-            const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries'].includes(id);
+            const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
             if (isChildPage) {
                 navBar.style.display = 'none';
@@ -1238,6 +1609,22 @@
                 } else {
                     updateProfileUI(null);
                 }
+            } else if (id === 'exams') {
+                // When navigating back to exams, clear exam-taking section content
+                const questionsDisplayContainer = document.getElementById('questions-display-container');
+                const submitExamButton = document.getElementById('submit-exam-button');
+                const examResultsElement = document.getElementById('exam-results');
+                const examTimerElement = document.getElementById('exam-timer');
+                const examTitleElement = document.getElementById('exam-taking-title');
+
+                questionsDisplayContainer.innerHTML = '';
+                submitExamButton.style.display = 'none';
+                examResultsElement.innerHTML = '';
+                examTimerElement.textContent = '';
+                examTitleElement.textContent = '';
+                examTimerElement.style.display = 'block'; // Show timer again for next exam
+                examTitleElement.style.display = 'block'; // Show title again for next exam
+                questionsDisplayContainer.style.display = 'block'; // Show questions container again
             }
         }
 
@@ -1363,7 +1750,12 @@
         });
 
         document.getElementById('back-arrow').addEventListener('click', () => {
-            showTab('home');
+            // If currently in exam-taking section, go back to exams list
+            if (document.getElementById('exam-taking-section').classList.contains('active')) {
+                showTab('exams');
+            } else {
+                showTab('home');
+            }
         });
 
         // Swipe functionality for subject content area
