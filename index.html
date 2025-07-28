@@ -106,7 +106,6 @@
                 completedExamsSet.clear(); // Clear completed exams if logged out
                 loadExams(); // Still load exams even if not logged in (public data, no filtering)
             }
-            updatePointsDisplayClickHandler(); // Update click handler based on auth state
         });
 
         // Call authentication on page load to establish initial state
@@ -1297,6 +1296,19 @@
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
 
+        .exam-card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .exam-card-info {
+            font-size: 0.95rem;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
         .exam-start-button {
             background-color: #28a745; /* Green for start button */
             color: white;
@@ -1507,7 +1519,6 @@
             min-height: calc(100vh - 50px - 2rem - 2rem); /* Header + top/bottom padding */
             /* Adjusted to account for the header bar and padding */
             padding-top: 1.5rem; /* Add some top padding */
-            width: 100%; /* Ensure it takes full width for centering child elements */
         }
 
         .exam-review-container {
@@ -1660,7 +1671,7 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
-            <div class="points-display" id="points-display"></div> <!-- Removed onclick here, it's set dynamically -->
+            <div class="points-display" id="points-display" onclick="showTab('store')"></div>
         </div>
         <div id="exam-timer" class="exam-timer-display" style="display: none;"></div> <!-- Moved here -->
         <div class="header-end-elements"> <!-- For more-menu -->
@@ -1920,13 +1931,8 @@
 
         // Function to show main tabs
         function showTab(id) {
-            // Scroll the main content area to the top
-            const mainContent = document.getElementById('main');
-            if (mainContent) {
-                mainContent.scrollTop = 0;
-            }
-            // Also scroll window to top as a fallback/belt-and-suspenders approach
-            window.scrollTo(0, 0);
+            // Scroll to the top of the main content area instantly
+            document.getElementById('main').scrollTop = 0;
 
             document.querySelectorAll('section').forEach(sec => {
                 sec.classList.remove('active');
@@ -1943,46 +1949,36 @@
             }
 
             const navBar = document.querySelector('.bottom-nav');
-            const headerBar = document.getElementById('header-bar');
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
-            const examTimerElement = document.getElementById('exam-timer');
+            const examTimerElement = document.getElementById('exam-timer'); // Get the timer element
 
-            // Reset all header elements to default hidden
+            const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
+
+            // Reset display styles for header elements
             backArrow.style.display = 'none';
-            pointsDisplay.style.display = 'none';
-            moreMenuContainer.style.display = 'none';
-            examTimerElement.style.display = 'none';
+            pointsDisplay.style.display = 'flex'; // Default to flex
+            moreMenuContainer.style.display = 'block'; // Default to block
+            examTimerElement.style.display = 'none'; // Default to none
 
-            // Set bottom nav visibility
-            if (['home', 'exams', 'reviews'].includes(id)) {
-                navBar.style.display = 'flex';
-            } else {
+            // Apply specific styles based on the active tab
+            if (isChildPage) {
                 navBar.style.display = 'none';
-            }
+                backArrow.style.display = 'block';
 
-            // Set header elements visibility based on the current tab
-            if (id === 'exam-taking-section') {
-                backArrow.style.display = 'block';
-                examTimerElement.style.display = 'flex';
-                // headerBar.style.justifyContent remains 'space-between' (default)
-            } else if (id === 'store') {
-                backArrow.style.display = 'block';
-                pointsDisplay.style.display = 'flex'; // Show points on store page
-                // headerBar.style.justifyContent remains 'space-between' (default)
-            } else if (['profile', 'settings', 'notifications', 'summaries'].includes(id)) {
-                backArrow.style.display = 'block';
-                // pointsDisplay and moreMenuContainer remain hidden
-                // headerBar.style.justifyContent remains 'space-between' (default)
-            } else { // Home, Exams, Reviews (main tabs)
-                pointsDisplay.style.display = 'flex';
-                moreMenuContainer.style.display = 'block';
-                // headerBar.style.justifyContent remains 'space-between' (default)
+                if (id === 'exam-taking-section') {
+                    pointsDisplay.style.display = 'none'; // Hide points on exam page
+                    moreMenuContainer.style.display = 'none'; // Hide more menu on exam page
+                    examTimerElement.style.display = 'flex'; // Show timer
+                } else {
+                    // For other child pages (profile, settings, etc.)
+                    pointsDisplay.style.display = 'flex'; // Show points
+                    moreMenuContainer.style.display = 'block'; // Show more menu
+                }
+            } else {
+                navBar.style.display = 'flex';
             }
-
-            // Update points display click handler based on login status
-            updatePointsDisplayClickHandler();
 
             // If navigating to summaries, ensure the first subject tab is active
             if (id === 'summaries') {
@@ -2009,15 +2005,34 @@
             }
         }
 
-        // New function to handle the click behavior of points display
-        function updatePointsDisplayClickHandler() {
-            const pointsDisplay = document.getElementById('points-display');
-            if (pointsDisplay) {
-                if (window.currentUserId) {
-                    pointsDisplay.onclick = () => showTab('store');
-                } else {
-                    pointsDisplay.onclick = () => showTab('profile');
-                }
+        // Function to toggle the more menu dropdown
+        function toggleMoreMenu() {
+            const dropdown = document.getElementById('more-menu-dropdown');
+            dropdown.classList.toggle('active');
+        }
+
+        // Function to show content for a specific subject tab
+        function showSubjectContent(subjectId) {
+            // Deactivate all subject tabs
+            document.querySelectorAll('.subject-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Activate the clicked subject tab
+            const activeTab = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+
+            // Hide all subject content divs
+            document.querySelectorAll('.subject-content').forEach(contentDiv => {
+                contentDiv.style.display = 'none';
+            });
+
+            // Show the content div for the active subject
+            const contentToShow = document.getElementById(`${subjectId}-content`);
+            if (contentToShow) {
+                contentToShow.style.display = 'block';
             }
         }
 
@@ -2170,7 +2185,7 @@
                     // Get the currently active subject ID
                     const activeSubjectContent = document.querySelector('.subject-content.active');
                     if (!activeSubjectContent) return;
-                    const currentSubjectId = activeSubjectContent.id.replace('--content', '');
+                    const currentSubjectId = activeSubjectContent.id.replace('-content', '');
                     const currentIndex = subjectIds.indexOf(currentSubjectId);
 
                     if (Math.abs(diffX) > swipeThreshold) {
