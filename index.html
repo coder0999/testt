@@ -37,7 +37,7 @@
             projectId: "potato-e7861", // Example: "your-project-id"
             storageBucket: "potato-e7861.firebasestorage.app", // Example: "your-project-id.appspot.com"
             messagingSenderId: "905443935896", // Example: "1234567890"
-            appId: "1:905443935896:web:93c9de4305e49bb6ff32ed" // Example: "1:1234567890:web:abcdef123456"
+            appId: "1:9054439305896:web:93c9de4305e49bb6ff32ed" // Example: "1:1234567890:web:abcdef123456"
         };
 
         // For Canvas environment, use the provided global firebaseConfig.
@@ -1563,20 +1563,23 @@
             accent-color: var(--primary-color); /* Make radio button primary color */
         }
 
+        /* Style for the back-to-exams-button in the results page */
         .back-to-exams-button {
-            background-color: var(--primary-color); /* Changed to primary blue */
+            background-color: var(--primary-color); /* Primary blue */
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: 1rem 2rem; /* Same padding as submit button */
             border: none;
-            border-radius: 8px;
+            border-radius: 12px; /* Same border-radius as submit button */
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 1.1rem; /* Same font-size as submit button */
             font-weight: 600;
-            margin-top: auto; /* Pushes the button to the bottom */
-            margin-bottom: 1rem; /* Space from the very bottom */
+            margin-top: 2rem; /* Same margin-top as submit button */
             transition: background-color 0.2s ease, transform 0.1s ease;
-            width: fit-content; /* Adjust width to content */
-            align-self: center; /* Center the button horizontally */
+            width: 100%;
+            max-width: 300px; /* Same max-width as submit button */
+            margin-left: auto; /* Center button */
+            margin-right: auto; /* Center button */
+            display: block; /* Ensure it's a block element for centering */
         }
 
         .back-to-exams-button:hover {
@@ -1671,7 +1674,8 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
-            <div class="points-display" id="points-display" onclick="showTab('store')"></div>
+            <!-- Updated onclick for points-display -->
+            <div class="points-display" id="points-display" onclick="handlePointsDisplayClick()"></div>
         </div>
         <div id="exam-timer" class="exam-timer-display" style="display: none;"></div> <!-- Moved here -->
         <div class="header-end-elements"> <!-- For more-menu -->
@@ -1914,6 +1918,15 @@
                 } else {
                     pointsDisplayElement.textContent = `يجب تسجيل الدخول لتفعيل عداد النقاط`;
                 }
+            }
+        }
+
+        // New function to handle click on points display
+        function handlePointsDisplayClick() {
+            if (window.currentUserId) {
+                showTab('store'); // Go to store if logged in
+            } else {
+                showTab('profile'); // Go to profile if not logged in
             }
         }
 
