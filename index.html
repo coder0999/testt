@@ -624,6 +624,9 @@
             const questionsDisplayContainer = document.getElementById('questions-display-container');
             questionsDisplayContainer.innerHTML = ''; // Clear existing content
 
+            // Scroll the window to the top to show the results from the beginning
+            window.scrollTo(0, 0);
+
             let pointsHtml = '';
             // Removed submissionMessage as requested
 
@@ -652,9 +655,6 @@
                 </div>
                 <button class="back-to-exams-button" onclick="showTab('exams');">العودة</button>
             `;
-
-            // Scroll to the top of the questionsDisplayContainer to show results from the top
-            questionsDisplayContainer.scrollTop = 0;
 
             const reviewContainer = questionsDisplayContainer.querySelector('.exam-review-container');
 
