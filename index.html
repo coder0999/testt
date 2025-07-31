@@ -64,7 +64,6 @@
         let examTimerInterval = null;
         let examDurationSeconds = 0;
         let examStartTime = 0;
-        let oneMinuteWarningShown = false; // Flag to ensure warning is shown only once
 
         // Global variable to store completed exam IDs
         let completedExamsSet = new Set();
@@ -435,8 +434,6 @@
             submitExamButton.style.display = 'none';
             // examResultsElement.innerHTML = ''; // This line is no longer needed
 
-            // Reset the one-minute warning flag for a new exam
-            oneMinuteWarningShown = false;
             examTimerElement.classList.remove('timer-warning'); // Ensure timer is not red initially
 
             try {
@@ -535,15 +532,12 @@
                 const seconds = remainingTime % 60;
                 examTimerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-                // Change timer color to red and show warning for the last minute
-                if (remainingTime <= 60) {
+                // MODIFIED: Change timer color to red for the last 25% of the time
+                const warningThreshold = examDurationSeconds * 0.25;
+                if (remainingTime <= warningThreshold) {
                     examTimerElement.classList.add('timer-warning');
-                    if (remainingTime === 60 && !oneMinuteWarningShown) {
-                        showMessageBox('تبقى دقيقة واحدة!', 'info');
-                        oneMinuteWarningShown = true; // Set flag to true to prevent repeated warnings
-                    }
                 } else {
-                    examTimerElement.classList.remove('timer-warning'); // Ensure color is normal if over 1 minute
+                    examTimerElement.classList.remove('timer-warning');
                 }
 
             }, 1000);
@@ -1456,19 +1450,18 @@
             text-align: center;
         }
 
-        /* Timer style - now blue and fixed within header */
+        /* MODIFIED: Timer is now on the left of the header during exams */
         .exam-timer-display {
             font-size: 1.2rem;
             font-weight: 600;
-            color: var(--primary-color); /* Blue color */
+            color: var(--primary-color);
             background-color: var(--active-bg);
             padding: 0.3rem 0.6rem;
             border-radius: 0.75rem;
-            display: flex; /* Changed from none to flex for visibility */
-            align-items: center; /* Center content vertically */
-            justify-content: center; /* Center content horizontally */
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
             transition: background-color 0.3s ease, color 0.3s ease;
-            margin-right: 1rem; /* Increased margin to push it slightly right in RTL */
         }
 
         .exam-timer-display.timer-warning {
@@ -1704,14 +1697,13 @@
             }
         }
 
-        /* Styles specifically for when exam-taking-section is active */
+        /* MODIFIED: Styles specifically for when exam-taking-section is active */
         body:has(#exam-taking-section.active) #header-bar {
-            justify-content: space-between; /* Keep space-between */
+            justify-content: space-between;
         }
 
         body:has(#exam-taking-section.active) .header-start-elements {
-            display: flex; /* Ensure back-arrow is visible and points-display is hidden */
-            order: 1; /* Puts it on the right in RTL */
+            display: flex;
         }
 
         body:has(#exam-taking-section.active) #back-arrow {
@@ -1719,19 +1711,16 @@
         }
 
         body:has(#exam-taking-section.active) #points-display {
-            display: none; /* Hide points on exam page */
+            display: none;
         }
 
         body:has(#exam-taking-section.active) #exam-timer {
-            display: flex; /* Make sure it's visible */
-            order: 2; /* Puts it in the middle */
-            margin-right: auto; /* Push to center */
-            margin-left: auto; /* Push to center */
+            display: flex; /* Timer is now visible */
+            /* Removed centering properties, space-between on parent handles positioning */
         }
 
         body:has(#exam-taking-section.active) .header-end-elements {
-            display: none; /* Hide the entire end elements container (more menu) */
-            order: 3; /* Puts it on the left */
+            display: none; /* More menu is hidden */
         }
 
         /* New styles for Notifications section */
@@ -1782,7 +1771,7 @@
             <!-- Updated onclick for points-display -->
             <div class="points-display" id="points-display" onclick="handlePointsDisplayClick()"></div>
         </div>
-        <div id="exam-timer" class="exam-timer-display" style="display: none;"></div> <!-- Moved here -->
+        <div id="exam-timer" class="exam-timer-display"></div> <!-- Moved here -->
         <div class="header-end-elements"> <!-- For more-menu -->
             <div class="more-menu-container">
                 <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2074,15 +2063,21 @@
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
-            const examTimerElement = document.getElementById('exam-timer'); // Get the timer element
+            const examTimerElement = document.getElementById('exam-timer');
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
             // Reset display styles for header elements
             backArrow.style.display = 'none';
-            pointsDisplay.style.display = 'flex'; // Default to flex
-            moreMenuContainer.style.display = 'block'; // Default to block
-            examTimerElement.style.display = 'none'; // Default to none
+            pointsDisplay.style.display = 'flex';
+            examTimerElement.style.display = 'none';
+
+            // MODIFIED: Show "More" menu only on the home page
+            if (id === 'home') {
+                moreMenuContainer.style.display = 'block';
+            } else {
+                moreMenuContainer.style.display = 'none';
+            }
 
             // Apply specific styles based on the active tab
             if (isChildPage) {
@@ -2090,13 +2085,8 @@
                 backArrow.style.display = 'block';
 
                 if (id === 'exam-taking-section') {
-                    pointsDisplay.style.display = 'none'; // Hide points on exam page
-                    moreMenuContainer.style.display = 'none'; // Hide more menu on exam page
-                    examTimerElement.style.display = 'flex'; // Show timer
-                } else {
-                    // For other child pages (profile, settings, etc.)
-                    pointsDisplay.style.display = 'flex'; // Show points
-                    moreMenuContainer.style.display = 'block'; // Show more menu
+                    pointsDisplay.style.display = 'none';
+                    examTimerElement.style.display = 'flex';
                 }
             } else {
                 navBar.style.display = 'flex';
@@ -2123,8 +2113,8 @@
                 submitExamButton.style.display = 'none';
                 examTimerElement.textContent = '';
                 examTitleElement.textContent = '';
-                questionsDisplayContainer.style.display = 'block'; // Show questions container again for next exam
-            } else if (id === 'notifications') { // NEW: Load notifications when this tab is active
+                questionsDisplayContainer.style.display = 'block';
+            } else if (id === 'notifications') {
                 loadNotifications();
             }
         }
