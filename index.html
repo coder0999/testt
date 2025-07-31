@@ -843,6 +843,14 @@
         /* Ensure main content background is white when exam-taking-section is active */
         main {
             background-color: var(--background-color); /* Default background */
+            padding-top: calc(50px + 2rem); /* Space for header */
+            padding-right: 1.25rem; /* Default padding for RTL */
+            padding-left: 1.25rem;
+            padding-bottom: 80px; /* Space for bottom nav on mobile */
+            min-height: calc(100vh - 50px); /* Adjust min-height for header */
+            transition: background-color 0.3s ease;
+            overflow-y: auto; /* Ensure main content can scroll */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
         main:has(#exam-taking-section.active) {
             background-color: var(--background-color); /* Override main background to white when exam section is active */
@@ -854,7 +862,7 @@
             justify-content: space-between;
             align-items: center;
             height: 50px;
-            padding: 0 1.5rem; /* Increased padding for more space from edges */
+            padding: 0 1.25rem;
             background-color: var(--background-color);
             border-bottom: 1px solid var(--border-color);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
@@ -909,17 +917,6 @@
             transform: scale(0.95); /* Add active state for visual feedback */
         }
 
-        main {
-            padding: 2rem 1.25rem;
-            padding-bottom: 80px;
-            text-align: center;
-            min-height: calc(100vh - 70px - 50px);
-            padding-top: calc(50px + 2rem);
-            transition: background-color 0.3s ease;
-            overflow-y: auto; /* Ensure main content can scroll */
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-        }
-
         /* Hide main content scrollbar if it appears */
         main::-webkit-scrollbar {
             display: none;
@@ -944,24 +941,30 @@
             display: block;
         }
 
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            height: 70px;
+        /* Generic nav-bar styling */
+        .nav-bar {
             background-color: var(--background-color);
             display: flex;
             justify-content: space-around;
             align-items: center;
+            z-index: 1000;
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Mobile (bottom) navigation */
+        .nav-bar.bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 70px;
+            flex-direction: row;
             border-top: 1px solid var(--border-color);
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
             box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
-            z-index: 1000;
-            transition: all 0.3s ease;
         }
 
-        .bottom-nav button {
+        .nav-bar button {
             background: none;
             border: none;
             color: var(--inactive-color);
@@ -978,15 +981,15 @@
             transition: all 0.1s ease;
         }
 
-        .bottom-nav button:active {
+        .nav-bar button:active {
             transform: scale(0.95);
         }
 
-        .bottom-nav button.active {
+        .nav-bar button.active {
             color: var(--primary-color);
         }
 
-        .bottom-nav button .icon-container {
+        .nav-bar button .icon-container {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -995,11 +998,11 @@
             transition: background-color 0.1s ease;
         }
 
-        .bottom-nav button.active .icon-container {
+        .nav-bar button.active .icon-container {
             background-color: var(--active-bg);
         }
 
-        .bottom-nav button svg {
+        .nav-bar button svg {
             width: 24px;
             height: 24px;
             stroke: var(--inactive-color);
@@ -1007,27 +1010,27 @@
             transition: color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
         }
 
-        .bottom-nav button.active svg {
+        .nav-bar button.active svg {
             fill: none;
             stroke: var(--icon-active-fill);
         }
 
-        .bottom-nav button[onclick="showTab('exams')"].active svg,
-        .bottom-nav button[onclick="showTab('reviews')"].active svg {
+        .nav-bar button[onclick="showTab('exams')"].active svg,
+        .nav-bar button[onclick="showTab('reviews')"].active svg {
             fill: var(--icon-active-fill);
             stroke: var(--icon-active-fill);
         }
 
-        .bottom-nav button[onclick="showTab('exams')"].active svg path[stroke="white"],
-        .bottom-nav button[onclick="showTab('exams')"].active svg line[stroke="white"],
-        .bottom-nav button[onclick="showTab('exams')"].active svg polyline[stroke="white"],
-        .bottom-nav button[onclick="showTab('reviews')"].active svg path[stroke="white"],
-        .bottom-nav button[onclick="showTab('reviews')"].active svg line[stroke="white"],
-        .bottom-nav button[onclick="showTab('reviews')"].active svg polyline[stroke="white"] {
+        .nav-bar button[onclick="showTab('exams')"].active svg path[stroke="white"],
+        .nav-bar button[onclick="showTab('exams')"].active svg line[stroke="white"],
+        .nav-bar button[onclick="showTab('exams')"].active svg polyline[stroke="white"],
+        .nav-bar button[onclick="showTab('reviews')"].active svg path[stroke="white"],
+        .nav-bar button[onclick="showTab('reviews')"].active svg line[stroke="white"],
+        .nav-bar button[onclick="showTab('reviews')"].active svg polyline[stroke="white"] {
             stroke: white;
         }
 
-        .bottom-nav button span {
+        .nav-bar button span {
             margin-top: 4px;
         }
 
@@ -1160,6 +1163,7 @@
         .more-menu-container {
             position: relative;
             cursor: pointer;
+            margin-left: 1rem;
         }
 
         #more-menu-icon {
@@ -1652,56 +1656,6 @@
             transform: scale(0.98);
         }
 
-        /* Media query for smaller screens (mobile) */
-        @media (max-width: 767px) {
-            #exam-taking-section {
-                padding-left: 0;
-                padding-right: 0;
-                max-width: 100%;
-            }
-
-            .exam-question-card {
-                width: calc(100% - 1rem);
-                margin-left: 0.5rem;
-                margin-right: 0.5rem;
-                box-sizing: border-box;
-            }
-        }
-
-        /* MODIFIED: Media query for tablets (vertical navigation) */
-        @media (min-width: 768px) and (max-width: 1024px) {
-            .bottom-nav {
-                top: 50px; /* Position below header */
-                right: 0;
-                bottom: 0;
-                left: auto;
-                width: 90px; /* Width of the vertical nav bar */
-                height: auto;
-                flex-direction: column;
-                justify-content: flex-start;
-                align-items: center;
-                padding-top: 1.5rem;
-                gap: 1.5rem;
-                border-top: none;
-                border-left: 1px solid var(--border-color);
-                border-radius: 0;
-                box-shadow: -2px 0 8px rgba(0,0,0,0.05);
-            }
-
-            main {
-                padding-right: 110px; /* Make space for the new nav bar */
-                padding-bottom: 2rem;
-            }
-            
-            main.full-width-on-tablet {
-                padding-right: 1.25rem; /* Revert padding when nav is hidden */
-            }
-
-            .bottom-nav button {
-                width: 100%;
-            }
-        }
-
         /* MODIFIED: Styles specifically for when exam-taking-section is active */
         body:has(#exam-taking-section.active) #header-bar {
             justify-content: space-between;
@@ -1721,6 +1675,7 @@
 
         body:has(#exam-taking-section.active) #exam-timer {
             display: flex; /* Timer is now visible */
+            /* Removed centering properties, space-between on parent handles positioning */
         }
 
         body:has(#exam-taking-section.active) .header-end-elements {
@@ -1761,6 +1716,170 @@
             color: var(--secondary-color);
             text-align: left; /* Align timestamp to the left */
         }
+
+        /* Media query for tablets and larger screens (min-width: 769px) */
+        @media (min-width: 769px) {
+            body {
+                display: flex; /* Use flexbox for main layout */
+                flex-direction: row-reverse; /* RTL layout: nav on right, content on left */
+                padding-bottom: 0; /* No bottom padding on larger screens */
+            }
+
+            #header-bar {
+                width: calc(100% - 80px); /* Header takes full width minus nav width */
+                right: 80px; /* Offset from right by nav width */
+                left: 0;
+            }
+
+            /* Side navigation styling */
+            .nav-bar.side-nav {
+                position: fixed;
+                top: 50px; /* Starts below the header */
+                right: 0;
+                bottom: 0;
+                width: 80px; /* Fixed width for side nav */
+                height: calc(100vh - 50px); /* Full height minus header */
+                flex-direction: column;
+                justify-content: flex-start; /* Align items to top */
+                align-items: center;
+                padding-top: 1rem;
+                border-top: none; /* Remove top border from mobile nav */
+                border-right: 1px solid var(--border-color); /* Add right border */
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+                box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05); /* Shadow on the left side */
+            }
+
+            .nav-bar.bottom-nav {
+                display: none; /* Hide bottom nav on larger screens */
+            }
+
+            .nav-bar.side-nav button {
+                width: 100%; /* Make buttons fill the nav width */
+                padding: 12px 0; /* Adjust padding for vertical layout */
+                margin-bottom: 0.5rem; /* Space between vertical buttons */
+            }
+
+            .nav-bar.side-nav button .icon-container {
+                padding: 8px; /* Adjust icon container padding */
+            }
+
+            .nav-bar.side-nav button span {
+                font-size: 10px; /* Smaller text for side nav */
+            }
+
+            main {
+                margin-right: 80px; /* Push main content to the left by nav width */
+                width: calc(100% - 80px); /* Main takes remaining width */
+                padding-top: calc(50px + 2rem); /* Keep padding for header */
+                padding-bottom: 2rem; /* Adjust bottom padding */
+                padding-right: 2rem; /* Adjust right padding for RTL */
+                padding-left: 2rem; /* Keep left padding */
+            }
+
+            /* Adjust sections for larger screens */
+            #exam-taking-section,
+            #profile,
+            #settings,
+            #store,
+            #notifications {
+                max-width: 900px; /* Increase max-width for better use of space */
+                margin-left: auto; /* Center content within main area */
+                margin-right: auto;
+            }
+
+            .exams-grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Larger cards for exams */
+            }
+
+            .home-cards-container {
+                justify-content: flex-start; /* Align cards to the right */
+                gap: 1.5rem; /* More space between cards */
+                max-width: 600px; /* Limit width of home cards */
+                margin-right: auto;
+                margin-left: auto;
+            }
+            .home-cards-container .card {
+                width: 180px; /* Fixed width for better control */
+            }
+
+            /* Adjust subject tabs for larger screens */
+            .subject-tabs-container {
+                justify-content: flex-start; /* Align tabs to the right */
+                padding-right: 0; /* Remove extra padding */
+                padding-left: 0;
+                margin-right: 0;
+                margin-left: 0;
+                flex-wrap: wrap; /* Allow tabs to wrap */
+                max-width: 900px; /* Limit width */
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .subject-tab {
+                width: 160px; /* Slightly larger tabs */
+                height: 70px;
+            }
+
+            /* Override main's padding for exam-taking-section to allow it to be wider */
+            main:has(#exam-taking-section.active) {
+                padding-left: 2rem; /* Keep normal padding */
+                padding-right: 2rem; /* Keep normal padding */
+            }
+        }
+
+        /* Specific adjustments for very large screens (laptops/desktops) */
+        @media (min-width: 1025px) {
+            .nav-bar.side-nav {
+                width: 90px; /* Slightly wider side nav */
+            }
+            main {
+                margin-right: 90px; /* Adjust main content margin */
+                width: calc(100% - 90px);
+            }
+            #header-bar {
+                width: calc(100% - 90px);
+                right: 90px;
+            }
+            #exam-taking-section,
+            #profile,
+            #settings,
+            #store,
+            #notifications {
+                max-width: 1000px; /* Even wider sections */
+            }
+            .exams-grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Even larger cards */
+            }
+            .home-cards-container {
+                max-width: 700px; /* Adjust home cards max width */
+            }
+            .subject-tabs-container {
+                max-width: 1000px; /* Adjust subject tabs max width */
+            }
+        }
+
+        /* Adjustments for smaller tablets (portrait) */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .question-text {
+                font-size: 1.15rem; /* Slightly larger for tablets */
+            }
+
+            .option-label span {
+                font-size: 1.05rem; /* Slightly larger for tablets */
+            }
+
+            .exam-summary-floating .exam-result-score,
+            .exam-summary-floating .exam-result-points,
+            .exam-summary-floating .exam-result-percentage {
+                font-size: 1.3rem; /* Larger for tablets */
+            }
+
+            .exam-summary-floating .exam-result-title {
+                font-size: 2.2rem; /* Larger for tablets */
+            }
+        }
+
     </style>
 </head>
 <body class="">
@@ -1969,7 +2088,8 @@
         </section>
     </main>
 
-    <nav class="bottom-nav" style="display: flex;">
+    <!-- Navigation Bar - now generic, styled by media queries -->
+    <nav class="nav-bar">
         <button onclick="showTab('home')" class="active">
             <div class="icon-container">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2054,23 +2174,23 @@
             });
             document.getElementById(id).classList.add('active');
 
-            document.querySelectorAll('.bottom-nav button').forEach(btn => {
+            document.querySelectorAll('.nav-bar button').forEach(btn => {
                 btn.classList.remove('active');
             });
 
-            const navButton = document.querySelector(`.bottom-nav button[onclick="showTab('${id}')"]`);
+            const navButton = document.querySelector(`.nav-bar button[onclick="showTab('${id}')"]`);
             if (navButton) {
                 navButton.classList.add('active');
             }
 
-            const navBar = document.querySelector('.bottom-nav');
+            const navBar = document.querySelector('.nav-bar');
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
             const examTimerElement = document.getElementById('exam-timer');
-            const mainContent = document.getElementById('main'); // Get main content element
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
+            const isMainPage = ['home', 'exams', 'reviews'].includes(id);
 
             // Reset display styles for header elements
             backArrow.style.display = 'none';
@@ -2088,15 +2208,15 @@
             if (isChildPage) {
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
-                mainContent.classList.add('full-width-on-tablet'); // Add class to expand main content on tablets
 
                 if (id === 'exam-taking-section') {
                     pointsDisplay.style.display = 'none';
                     examTimerElement.style.display = 'flex';
                 }
-            } else {
+            } else if (isMainPage) {
                 navBar.style.display = 'flex';
-                mainContent.classList.remove('full-width-on-tablet'); // Remove class
+            } else {
+                navBar.style.display = 'none'; // Fallback for any other unexpected tab
             }
 
             // If navigating to summaries, ensure the first subject tab is active
@@ -2261,6 +2381,16 @@
         const swipeThreshold = 50; // Minimum pixels to count as a swipe
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Determine initial navigation bar class based on screen width
+            const navBar = document.querySelector('.nav-bar');
+            if (window.innerWidth >= 769) {
+                navBar.classList.add('side-nav');
+                navBar.classList.remove('bottom-nav');
+            } else {
+                navBar.classList.add('bottom-nav');
+                navBar.classList.remove('side-nav');
+            }
+
             showTab('home'); // Show home tab by default
 
             const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -2322,6 +2452,18 @@
                     endX = 0;
                 });
             }
+
+            // Add event listener for window resize to adjust nav bar class
+            window.addEventListener('resize', () => {
+                const navBar = document.querySelector('.nav-bar');
+                if (window.innerWidth >= 769) {
+                    navBar.classList.add('side-nav');
+                    navBar.classList.remove('bottom-nav');
+                } else {
+                    navBar.classList.add('bottom-nav');
+                    navBar.classList.remove('side-nav');
+                }
+            });
         });
     </script>
 </body>
