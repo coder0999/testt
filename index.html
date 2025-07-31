@@ -854,7 +854,7 @@
             justify-content: space-between;
             align-items: center;
             height: 50px;
-            padding: 0 1.25rem;
+            padding: 0 1.5rem; /* Increased padding for more space from edges */
             background-color: var(--background-color);
             border-bottom: 1px solid var(--border-color);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
@@ -958,7 +958,7 @@
             border-top-right-radius: 16px;
             box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
             z-index: 1000;
-            transition: background-color 0.3s ease, border-top-color 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .bottom-nav button {
@@ -1160,7 +1160,6 @@
         .more-menu-container {
             position: relative;
             cursor: pointer;
-            margin-left: 1rem;
         }
 
         #more-menu-icon {
@@ -1653,47 +1652,53 @@
             transform: scale(0.98);
         }
 
-        /* Media query for smaller screens (mobile and tablets) */
-        @media (max-width: 1024px) {
-            /* Override main's padding for exam-taking-section to allow it to be wider */
-            main:has(#exam-taking-section.active) {
-                padding-left: 0.5rem; /* Add small padding to main */
-                padding-right: 0.5rem; /* Add small padding to main */
-            }
-
+        /* Media query for smaller screens (mobile) */
+        @media (max-width: 767px) {
             #exam-taking-section {
-                padding-left: 0; /* No padding here, main handles it */
-                padding-right: 0; /* No padding here, main handles it */
-                max-width: 100%; /* Ensure it spans full width */
+                padding-left: 0;
+                padding-right: 0;
+                max-width: 100%;
             }
 
             .exam-question-card {
-                width: calc(100% - 1rem); /* 100% minus 0.5rem margin on each side */
-                margin-left: 0.5rem; /* Add 0.5rem margin */
-                margin-right: 0.5rem; /* Add 0.5rem margin */
-                box-sizing: border-box; /* Include padding in width calculation */
-                border-radius: 12px; /* Keep rounded corners */
+                width: calc(100% - 1rem);
+                margin-left: 0.5rem;
+                margin-right: 0.5rem;
+                box-sizing: border-box;
+            }
+        }
+
+        /* MODIFIED: Media query for tablets (vertical navigation) */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .bottom-nav {
+                top: 50px; /* Position below header */
+                right: 0;
+                bottom: 0;
+                left: auto;
+                width: 90px; /* Width of the vertical nav bar */
+                height: auto;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: center;
+                padding-top: 1.5rem;
+                gap: 1.5rem;
+                border-top: none;
+                border-left: 1px solid var(--border-color);
+                border-radius: 0;
+                box-shadow: -2px 0 8px rgba(0,0,0,0.05);
             }
 
-            /* Font size adjustments for tablets */
-            @media (min-width: 769px) and (max-width: 1024px) {
-                .question-text {
-                    font-size: 1.15rem; /* Slightly larger for tablets */
-                }
+            main {
+                padding-right: 110px; /* Make space for the new nav bar */
+                padding-bottom: 2rem;
+            }
+            
+            main.full-width-on-tablet {
+                padding-right: 1.25rem; /* Revert padding when nav is hidden */
+            }
 
-                .option-label span {
-                    font-size: 1.05rem; /* Slightly larger for tablets */
-                }
-
-                .exam-summary-floating .exam-result-score,
-                .exam-summary-floating .exam-result-points,
-                .exam-summary-floating .exam-result-percentage {
-                    font-size: 1.3rem; /* Larger for tablets */
-                }
-
-                .exam-summary-floating .exam-result-title {
-                    font-size: 2.2rem; /* Larger for tablets */
-                }
+            .bottom-nav button {
+                width: 100%;
             }
         }
 
@@ -1716,7 +1721,6 @@
 
         body:has(#exam-taking-section.active) #exam-timer {
             display: flex; /* Timer is now visible */
-            /* Removed centering properties, space-between on parent handles positioning */
         }
 
         body:has(#exam-taking-section.active) .header-end-elements {
@@ -2064,6 +2068,7 @@
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
             const examTimerElement = document.getElementById('exam-timer');
+            const mainContent = document.getElementById('main'); // Get main content element
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
 
@@ -2072,7 +2077,7 @@
             pointsDisplay.style.display = 'flex';
             examTimerElement.style.display = 'none';
 
-            // MODIFIED: Show "More" menu only on the home page
+            // Show "More" menu only on the home page
             if (id === 'home') {
                 moreMenuContainer.style.display = 'block';
             } else {
@@ -2083,6 +2088,7 @@
             if (isChildPage) {
                 navBar.style.display = 'none';
                 backArrow.style.display = 'block';
+                mainContent.classList.add('full-width-on-tablet'); // Add class to expand main content on tablets
 
                 if (id === 'exam-taking-section') {
                     pointsDisplay.style.display = 'none';
@@ -2090,6 +2096,7 @@
                 }
             } else {
                 navBar.style.display = 'flex';
+                mainContent.classList.remove('full-width-on-tablet'); // Remove class
             }
 
             // If navigating to summaries, ensure the first subject tab is active
