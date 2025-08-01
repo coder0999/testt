@@ -843,14 +843,6 @@
         /* Ensure main content background is white when exam-taking-section is active */
         main {
             background-color: var(--background-color); /* Default background */
-            padding-top: calc(50px + 2rem); /* Space for header */
-            padding-right: 1.25rem; /* Default padding for RTL */
-            padding-left: 1.25rem;
-            padding-bottom: 80px; /* Space for bottom nav on mobile */
-            min-height: calc(100vh - 50px); /* Adjust min-height for header */
-            transition: background-color 0.3s ease;
-            overflow-y: auto; /* Ensure main content can scroll */
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
         main:has(#exam-taking-section.active) {
             background-color: var(--background-color); /* Override main background to white when exam section is active */
@@ -917,6 +909,17 @@
             transform: scale(0.95); /* Add active state for visual feedback */
         }
 
+        main {
+            padding: 2rem 1.25rem;
+            padding-bottom: 80px;
+            text-align: center;
+            min-height: calc(100vh - 70px - 50px);
+            padding-top: calc(50px + 2rem);
+            transition: background-color 0.3s ease;
+            overflow-y: auto; /* Ensure main content can scroll */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+
         /* Hide main content scrollbar if it appears */
         main::-webkit-scrollbar {
             display: none;
@@ -941,30 +944,24 @@
             display: block;
         }
 
-        /* Generic nav-bar styling */
-        .nav-bar {
-            background-color: var(--background-color);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 1000;
-            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        /* Mobile (bottom) navigation */
-        .nav-bar.bottom-nav {
+        .bottom-nav {
             position: fixed;
             bottom: 0;
             width: 100%;
             height: 70px;
-            flex-direction: row;
+            background-color: var(--background-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
             border-top: 1px solid var(--border-color);
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
             box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            transition: background-color 0.3s ease, border-top-color 0.3s ease;
         }
 
-        .nav-bar button {
+        .bottom-nav button {
             background: none;
             border: none;
             color: var(--inactive-color);
@@ -981,15 +978,15 @@
             transition: all 0.1s ease;
         }
 
-        .nav-bar button:active {
+        .bottom-nav button:active {
             transform: scale(0.95);
         }
 
-        .nav-bar button.active {
+        .bottom-nav button.active {
             color: var(--primary-color);
         }
 
-        .nav-bar button .icon-container {
+        .bottom-nav button .icon-container {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -998,39 +995,16 @@
             transition: background-color 0.1s ease;
         }
 
-        .nav-bar button.active .icon-container {
+        .bottom-nav button.active .icon-container {
             background-color: var(--active-bg);
         }
 
-        .nav-bar button svg {
+        .bottom-nav button svg {
             width: 24px;
             height: 24px;
-            stroke: var(--inactive-color);
-            fill: none;
-            transition: color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
         }
 
-        .nav-bar button.active svg {
-            fill: none;
-            stroke: var(--icon-active-fill);
-        }
-
-        .nav-bar button[onclick="showTab('exams')"].active svg,
-        .nav-bar button[onclick="showTab('reviews')"].active svg {
-            fill: var(--icon-active-fill);
-            stroke: var(--icon-active-fill);
-        }
-
-        .nav-bar button[onclick="showTab('exams')"].active svg path[stroke="white"],
-        .nav-bar button[onclick="showTab('exams')"].active svg line[stroke="white"],
-        .nav-bar button[onclick="showTab('exams')"].active svg polyline[stroke="white"],
-        .nav-bar button[onclick="showTab('reviews')"].active svg path[stroke="white"],
-        .nav-bar button[onclick="showTab('reviews')"].active svg line[stroke="white"],
-        .nav-bar button[onclick="showTab('reviews')"].active svg polyline[stroke="white"] {
-            stroke: white;
-        }
-
-        .nav-bar button span {
+        .bottom-nav button span {
             margin-top: 4px;
         }
 
@@ -1440,6 +1414,7 @@
         /* Exam Taking Section Styles */
         #exam-taking-section {
             padding: 1rem;
+            max-width: 800px;
             margin: 0 auto;
             text-align: right;
         }
@@ -1641,7 +1616,7 @@
             margin-top: 2rem; /* Same margin-top as submit button */
             transition: background-color 0.2s ease, transform 0.1s ease;
             width: 100%;
-            max-width: 300px; /* Limit width */
+            max-width: 300px; /* Same max-width as submit button */
             margin-left: auto; /* Center button */
             margin-right: auto; /* Center button */
             display: block; /* Ensure it's a block element for centering */
@@ -1653,6 +1628,50 @@
 
         .back-to-exams-button:active {
             transform: scale(0.98);
+        }
+
+        /* Media query for smaller screens (mobile and tablets) */
+        @media (max-width: 1024px) {
+            /* Override main's padding for exam-taking-section to allow it to be wider */
+            main:has(#exam-taking-section.active) {
+                padding-left: 0.5rem; /* Add small padding to main */
+                padding-right: 0.5rem; /* Add small padding to main */
+            }
+
+            #exam-taking-section {
+                padding-left: 0; /* No padding here, main handles it */
+                padding-right: 0; /* No padding here, main handles it */
+                max-width: 100%; /* Ensure it spans full width */
+            }
+
+            .exam-question-card {
+                width: calc(100% - 1rem); /* 100% minus 0.5rem margin on each side */
+                margin-left: 0.5rem; /* Add 0.5rem margin */
+                margin-right: 0.5rem; /* Add 0.5rem margin */
+                box-sizing: border-box; /* Include padding in width calculation */
+                border-radius: 12px; /* Keep rounded corners */
+            }
+
+            /* Font size adjustments for tablets */
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .question-text {
+                    font-size: 1.15rem; /* Slightly larger for tablets */
+                }
+
+                .option-label span {
+                    font-size: 1.05rem; /* Slightly larger for tablets */
+                }
+
+                .exam-summary-floating .exam-result-score,
+                .exam-summary-floating .exam-result-points,
+                .exam-summary-floating .exam-result-percentage {
+                    font-size: 1.3rem; /* Larger for tablets */
+                }
+
+                .exam-summary-floating .exam-result-title {
+                    font-size: 2.2rem; /* Larger for tablets */
+                }
+            }
         }
 
         /* MODIFIED: Styles specifically for when exam-taking-section is active */
@@ -1715,181 +1734,6 @@
             color: var(--secondary-color);
             text-align: left; /* Align timestamp to the left */
         }
-
-        /* Media query for tablets and larger screens (min-width: 769px) */
-        @media (min-width: 769px) {
-            body {
-                display: flex; /* Use flexbox for main layout */
-                flex-direction: row-reverse; /* RTL layout: nav on right, content on left */
-                padding-bottom: 0; /* No bottom padding on larger screens */
-            }
-
-            #header-bar {
-                width: calc(100% - 80px); /* Header takes full width minus nav width */
-                right: 80px; /* Offset from right by nav width */
-                left: 0;
-                /* Ensure the header's right edge aligns with the side nav's left edge */
-                border-top-right-radius: 0; /* Remove top-right border radius if it interferes */
-            }
-
-            /* Side navigation styling */
-            .nav-bar.side-nav {
-                position: fixed;
-                top: 50px; /* Starts below the header */
-                right: 0;
-                bottom: 0;
-                width: 80px; /* Fixed width for side nav */
-                height: calc(100vh - 50px); /* Full height minus header */
-                flex-direction: column;
-                justify-content: flex-start; /* Align items to top */
-                align-items: center;
-                padding-top: 1rem;
-                border-top: none; /* Remove top border from mobile nav */
-                border-right: 1px solid var(--border-color); /* Add right border */
-                border-top-left-radius: 0;
-                border-top-right-radius: 0;
-                border-bottom-right-radius: 0;
-                box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05); /* Shadow on the left side */
-            }
-
-            .nav-bar.bottom-nav {
-                display: none; /* Hide bottom nav on larger screens */
-            }
-
-            .nav-bar.side-nav button {
-                width: 100%; /* Make buttons fill the nav width */
-                padding: 12px 0; /* Adjust padding for vertical layout */
-                margin-bottom: 0.5rem; /* Space between vertical buttons */
-            }
-
-            .nav-bar.side-nav button .icon-container {
-                padding: 8px; /* Adjust icon container padding */
-            }
-
-            .nav-bar.side-nav button span {
-                font-size: 10px; /* Smaller text for side nav */
-            }
-
-            main {
-                margin-right: 80px; /* Push main content to the left by nav width */
-                width: calc(100% - 80px); /* Main takes remaining width */
-                padding-top: calc(50px + 2rem); /* Keep padding for header */
-                padding-bottom: 2rem; /* Adjust bottom padding */
-                padding-right: 2rem; /* Adjust right padding for RTL */
-                padding-left: 2rem; /* Keep left padding */
-            }
-
-            /* Adjust sections for larger screens */
-            #exam-taking-section,
-            #profile,
-            #settings,
-            #store,
-            #notifications {
-                max-width: 100%; /* Allow full width for exam cards */
-                margin-left: 0; /* Remove auto margin to push to edges */
-                margin-right: 0;
-                padding-left: 2rem; /* Add padding to content within section */
-                padding-right: 2rem; /* Add padding to content within section */
-            }
-
-            .exams-grid-container {
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Larger cards for exams */
-            }
-
-            .home-cards-container {
-                justify-content: flex-start; /* Align cards to the right */
-                gap: 1.5rem; /* More space between cards */
-                max-width: 600px; /* Limit width of home cards */
-                margin-right: auto;
-                margin-left: auto;
-            }
-            .home-cards-container .card {
-                width: 180px; /* Fixed width for better control */
-            }
-
-            /* Adjust subject tabs for larger screens */
-            .subject-tabs-container {
-                justify-content: flex-start; /* Align tabs to the right */
-                padding-right: 0; /* Remove extra padding */
-                padding-left: 0;
-                margin-right: 0;
-                margin-left: 0;
-                flex-wrap: wrap; /* Allow tabs to wrap */
-                max-width: 900px; /* Limit width */
-                margin-left: auto;
-                margin-right: auto;
-            }
-            .subject-tab {
-                width: 160px; /* Slightly larger tabs */
-                height: 70px;
-            }
-
-            /* Override main's padding for exam-taking-section to allow it to be wider */
-            main:has(#exam-taking-section.active) {
-                padding-left: 0; /* Remove padding from main to allow section to span full width */
-                padding-right: 0; /* Remove padding from main to allow section to span full width */
-            }
-
-            /* Align submit and back buttons to the right */
-            #submit-exam-button,
-            .back-to-exams-button {
-                margin-left: 0; /* Push to the right */
-                margin-right: auto; /* Allow auto margin on left */
-            }
-        }
-
-        /* Specific adjustments for very large screens (laptops/desktops) */
-        @media (min-width: 1025px) {
-            .nav-bar.side-nav {
-                width: 90px; /* Slightly wider side nav */
-            }
-            main {
-                margin-right: 90px; /* Adjust main content margin */
-                width: calc(100% - 90px);
-            }
-            #header-bar {
-                width: calc(100% - 90px);
-                right: 90px;
-            }
-            #exam-taking-section,
-            #profile,
-            #settings,
-            #store,
-            #notifications {
-                max-width: 100%; /* Keep full width */
-            }
-            .exams-grid-container {
-                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Even larger cards */
-            }
-            .home-cards-container {
-                max-width: 700px; /* Adjust home cards max width */
-            }
-            .subject-tabs-container {
-                max-width: 1000px; /* Adjust subject tabs max width */
-            }
-        }
-
-        /* Adjustments for smaller tablets (portrait) */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .question-text {
-                font-size: 1.15rem; /* Slightly larger for tablets */
-            }
-
-            .option-label span {
-                font-size: 1.05rem; /* Slightly larger for tablets */
-            }
-
-            .exam-summary-floating .exam-result-score,
-            .exam-summary-floating .exam-result-points,
-            .exam-summary-floating .exam-result-percentage {
-                font-size: 1.3rem; /* Larger for tablets */
-            }
-
-            .exam-summary-floating .exam-result-title {
-                font-size: 2.2rem; /* Larger for tablets */
-            }
-        }
-
     </style>
 </head>
 <body class="">
@@ -2098,40 +1942,36 @@
         </section>
     </main>
 
-    <!-- Navigation Bar - now generic, styled by media queries -->
-    <nav class="nav-bar">
+    <nav class="bottom-nav" style="display: flex;">
         <button onclick="showTab('home')" class="active">
             <div class="icon-container">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                    <path d="M9 22V12h6v10"></path>
+                <!-- SVG Icon for Home -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1.58594 10.5453L10.9393 1.43968C11.0786 1.30029 11.244 1.18971 11.426 1.11427C11.6081 1.03883 11.8032 1 12.0003 1C12.1973 1 12.3925 1.03883 12.5745 1.11427C12.7566 1.18971 12.922 1.30029 13.0613 1.43968L22.4146 10.5453"/>
+                    <path d="M16.5 4.62866V3.12866H20V7.84375"/>
+                    <path d="M3 9.5V18.069V21.6552C3 22.0118 3.1724 22.3539 3.47928 22.6061C3.78616 22.8583 4.20237 23 4.63636 23H19.3636C19.7976 23 20.2138 22.8583 20.5207 22.6061C20.8276 22.3539 21 22.0118 21 21.6552V9.5"/>
+                    <path d="M15 23V18C15 16.3431 13.6569 15 12 15V15C10.3431 15 9 16.3431 9 18V23"/>
                 </svg>
             </div>
             <span>الرئيسية</span>
         </button>
         <button onclick="showTab('exams')" class="">
             <div class="icon-container">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="currentColor"></path>
-                    <polyline points="14 2 14 8 20 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
-                    <line x1="16" y1="17" x2="8" y2="17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
-                    <line x1="10" y1="9" x2="8" y2="9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
+                <!-- SVG Icon for Exams -->
+                <svg width="24" height="24" viewBox="0 0 294.023 294.023" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M124.916,0.002 c-1.649,0.045-3.169,0.9-4.064,2.285l-14.49,21.736h-49.35c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5 V39.574l-10,15v19.449h-40v-40h37.682L85.631,55.117l-6.146-12.293c-1.205-2.485-4.196-3.523-6.681-2.318 c-2.485,1.205-3.523,4.196-2.318,6.681c0.018,0.036,0.035,0.072,0.054,0.108l10,20c1.235,2.47,4.238,3.472,6.709,2.237 c0.778-0.389,1.441-0.974,1.924-1.698l40-60c1.565-2.276,0.989-5.389-1.287-6.954C127.013,0.281,125.974-0.027,124.916,0.002 L124.916,0.002z M147.012,44.025c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5 H147.012z M57.012,94.06c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5v-50c0-2.761-2.239-5-5-5H57.012z M62.012,104.06h40v40h-40V104.06z M147.012,114.023c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10 c0-2.761-2.239-5-5-5H147.012z M57.012,164.023c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5v-50 c0-2.761-2.239-5-5-5H57.012z M62.012,174.023h40v40h-40V174.023z M147.012,184.058c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90 c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5H147.012z M57.012,234.023c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50 c2.761,0,5-2.239,5-5v-50c0-2.761-2.239-5-5-5L57.012,234.023L57.012,234.023z M62.012,244.023h40v40h-40V244.023z M147.012,254.023 c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5H147.012z"/>
                 </svg>
             </div>
             <span>اختبارات</span>
         </button>
         <button onclick="showTab('reviews')" class="">
             <div class="icon-container">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" fill="currentColor"></path>
-                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" fill="currentColor"></path>
-                    <path d="M12 3v18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <path d="M7 7h-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <path d="M17 7h5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <!-- SVG Icon for Reviews/Ratings -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 9H21M9 15L11 17L15 13M7 3V5M17 3V5M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
-            <span>التقييمات</span>
+            <span>التقييمات الاسبوعية</span>
         </button>
     </nav>
 
@@ -2184,30 +2024,29 @@
             });
             document.getElementById(id).classList.add('active');
 
-            document.querySelectorAll('.nav-bar button').forEach(btn => {
+            document.querySelectorAll('.bottom-nav button').forEach(btn => {
                 btn.classList.remove('active');
             });
 
-            const navButton = document.querySelector(`.nav-bar button[onclick="showTab('${id}')"]`);
+            const navButton = document.querySelector(`.bottom-nav button[onclick="showTab('${id}')"]`);
             if (navButton) {
                 navButton.classList.add('active');
             }
 
-            const navBar = document.querySelector('.nav-bar');
+            const navBar = document.querySelector('.bottom-nav');
             const backArrow = document.getElementById('back-arrow');
             const pointsDisplay = document.getElementById('points-display');
             const moreMenuContainer = document.querySelector('.more-menu-container');
             const examTimerElement = document.getElementById('exam-timer');
 
             const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
-            const isMainPage = ['home', 'exams', 'reviews'].includes(id);
 
             // Reset display styles for header elements
             backArrow.style.display = 'none';
             pointsDisplay.style.display = 'flex';
             examTimerElement.style.display = 'none';
 
-            // Show "More" menu only on the home page
+            // MODIFIED: Show "More" menu only on the home page
             if (id === 'home') {
                 moreMenuContainer.style.display = 'block';
             } else {
@@ -2216,25 +2055,15 @@
 
             // Apply specific styles based on the active tab
             if (isChildPage) {
-                navBar.style.display = 'none'; // Hide nav bar for child pages
+                navBar.style.display = 'none';
                 backArrow.style.display = 'block';
 
                 if (id === 'exam-taking-section') {
                     pointsDisplay.style.display = 'none';
                     examTimerElement.style.display = 'flex';
                 }
-            } else if (isMainPage) {
-                // Check if screen width is large enough to show side nav
-                if (window.innerWidth >= 769) {
-                    navBar.classList.add('side-nav');
-                    navBar.classList.remove('bottom-nav');
-                } else {
-                    navBar.classList.add('bottom-nav');
-                    navBar.classList.remove('side-nav');
-                }
-                navBar.style.display = 'flex'; // Show nav bar for main pages
             } else {
-                navBar.style.display = 'none'; // Fallback for any other unexpected tab
+                navBar.style.display = 'flex';
             }
 
             // If navigating to summaries, ensure the first subject tab is active
@@ -2399,16 +2228,6 @@
         const swipeThreshold = 50; // Minimum pixels to count as a swipe
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Determine initial navigation bar class based on screen width
-            const navBar = document.querySelector('.nav-bar');
-            if (window.innerWidth >= 769) {
-                navBar.classList.add('side-nav');
-                navBar.classList.remove('bottom-nav');
-            } else {
-                navBar.classList.add('bottom-nav');
-                navBar.classList.remove('side-nav');
-            }
-
             showTab('home'); // Show home tab by default
 
             const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -2470,23 +2289,6 @@
                     endX = 0;
                 });
             }
-
-            // Add event listener for window resize to adjust nav bar class
-            window.addEventListener('resize', () => {
-                const navBar = document.querySelector('.nav-bar');
-                if (window.innerWidth >= 769) {
-                    navBar.classList.add('side-nav');
-                    navBar.classList.remove('bottom-nav');
-                } else {
-                    navBar.classList.add('bottom-nav');
-                    navBar.classList.remove('side-nav');
-                }
-                // Re-evaluate current tab display to ensure nav bar visibility is correct on resize
-                const activeSection = document.querySelector('section.active');
-                if (activeSection) {
-                    showTab(activeSection.id);
-                }
-            });
         });
     </script>
 </body>
