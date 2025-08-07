@@ -19,750 +19,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://fonts.gstatic.com">
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        // Import collection and onSnapshot for listening to real-time updates, and getDoc for fetching single documents
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
-        // Firebase Configuration:
-        // IMPORTANT: For deployment on GitHub or any other hosting, you MUST replace the placeholder
-        // configuration below with your actual Firebase project configuration.
-        // You can find this in your Firebase Console -> Project settings -> Your apps -> Web app.
-        const firebaseConfig = {
-            apiKey: "AIzaSyC3BSf75v3qFs2xm7i-TJksrcEHELEmVpo", // Example: "AIzaSyC...yourkey"
-            authDomain: "potato-e7861.firebaseapp.com", // Example: "your-project-id.firebaseapp.com"
-            projectId: "potato-e7861", // Example: "your-project-id"
-            storageBucket: "potato-e7861.firebasestorage.app", // Example: "your-project-id.appspot.com"
-            messagingSenderId: "905443935896", // Example: "1234567890"
-            appId: "1:9054439305896:web:93c9de4305e49bb6ff32ed" // Example: "1:1234567890:web:abcdef123456"
-        };
-
-        // For Canvas environment, use the provided global firebaseConfig.
-        // For deployment, ensure you've replaced the placeholders above.
-        const effectiveFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
-
-        // Determine appId: Use Canvas's __app_id if available, otherwise use projectId from config.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : effectiveFirebaseConfig.projectId;
-
-
-        // Initialize Firebase
-        window.firebaseApp = initializeApp(effectiveFirebaseConfig);
-        window.firebaseAuth = getAuth(window.firebaseApp);
-        window.firebaseDb = getFirestore(window.firebaseApp);
-        window.googleAuthProvider = GoogleAuthProvider; // Expose GoogleAuthProvider for sign-in
-
-        // Global variables to store current user's UID and points
-        window.currentUserId = null;
-        window.currentPoints = 0;
-        let isAuthReady = false; // Flag to ensure Firestore operations wait for auth state to be known
-
-        // Global variables for exam state
-        let currentExamData = null;
-        let examTimerInterval = null;
-        let examDurationSeconds = 0;
-        let examStartTime = 0;
-
-        // Global variable to store completed exam IDs
-        let completedExamsSet = new Set();
-
-        // Array to store user's answers in real-time
-        let userAnswers = [];
-
-        // Function to handle initial authentication (custom token or anonymous)
-        async function authenticateUser() {
-            try {
-                // In Canvas environment, we might get a custom token for testing.
-                // For deployed apps, anonymous sign-in is a common fallback if no user is logged in.
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(window.firebaseAuth, __initial_auth_token);
-                    console.log('Signed in with custom token (Canvas environment).');
-                } else {
-                    // For deployed applications, sign in anonymously if no other auth method is active.
-                    await signInAnonymously(window.firebaseAuth);
-                    console.log('Signed in anonymously (deployed environment fallback).');
-                }
-            } catch (error) {
-                console.error('Firebase authentication error during initial setup:', error);
-            }
-        }
-
-        // Listen for authentication state changes
-        onAuthStateChanged(window.firebaseAuth, async (user) => {
-            window.currentUserId = user ? user.uid : null; // Update global currentUserId
-            isAuthReady = true; // Authentication state is now determined
-            console.log('Auth state changed:', user ? user.uid : 'No user');
-            updateProfileUI(user); // Update the profile UI based on current auth state
-            if (user) {
-                await saveUserProfile(user); // Save/update user profile in Firestore
-                await getPoints(); // Fetch points for the logged-in user
-                await fetchCompletedExams(); // Fetch completed exams for the logged-in user
-                loadNotifications(); // Load notifications for logged-in users
-            } else {
-                window.currentPoints = 0; // Reset points if no user is logged in
-                updatePointsDisplay(); // Update display for logged out state
-                completedExamsSet.clear(); // Clear completed exams if logged out
-                loadExams(); // Still load exams even if not logged in (public data, no filtering)
-                loadNotifications(); // Load notifications even if not logged in (public data)
-            }
-        });
-
-        // Call authentication on page load to establish initial state
-        authenticateUser();
-
-        // Function to handle Google Sign-in
-        window.signInWithGoogle = async () => {
-            if (!window.firebaseAuth) {
-                console.error('Firebase Auth not initialized.');
-                return;
-            }
-            const provider = new window.googleAuthProvider();
-            // Force account selection for better user experience
-            provider.setCustomParameters({
-                prompt: 'select_account'
-            });
-            try {
-                await signInWithPopup(window.firebaseAuth, provider);
-                console.log('Google Sign-in successful.');
-            } catch (error) {
-                console.error('Error during Google Sign-in:', error);
-                if (error.code === 'auth/popup-closed-by-user') {
-                    console.log('Google Sign-in popup was closed by the user.');
-                }
-            }
-        };
-
-        // Function to handle user sign out
-        window.signOutUser = async () => {
-            if (!window.firebaseAuth) {
-                console.error('Firebase Auth not initialized.');
-                return;
-            }
-            try {
-                await signOut(window.firebaseAuth);
-                console.log('User signed out.');
-                window.currentPoints = 0; // Reset points on sign out
-                updatePointsDisplay(); // Update display for logged out state
-                completedExamsSet.clear(); // Clear completed exams on sign out
-                loadExams(); // Re-load exams to show all available
-                loadNotifications(); // Reload notifications for logged out state
-            } catch (error) {
-                console.error('Error during sign out:', error);
-            }
-        };
-
-        // Function to update the profile UI based on user authentication state
-        window.updateProfileUI = (user) => {
-            const profileContentDiv = document.getElementById('profile-content-area');
-            if (!profileContentDiv) return;
-
-            profileContentDiv.innerHTML = ''; // Clear existing content
-
-            if (user) {
-                // User is logged in
-                const userName = user.displayName || user.email || 'مستخدم';
-                const userEmail = user.email ? `<p style="color: var(--secondary-color); font-size: 0.95rem; margin-bottom: 0.5rem;">${user.email}</p>` : '';
-                const userPhoto = user.photoURL ? `<img src="${user.photoURL}" alt="صورة الملف الشخصي" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 1.5rem; border: 3px solid var(--primary-color); box-shadow: 0 4px 8px rgba(0,0,0,0.1);">` : '';
-
-                profileContentDiv.innerHTML = `
-                    ${userPhoto}
-                    <h2 style="color: var(--primary-color); font-size: 1.8rem; margin-bottom: 0.5rem;">أهلاً بك، ${userName}!</h2>
-                    ${userEmail}
-                    <p style="color: var(--secondary-color); font-size: 0.8rem; margin-bottom: 2rem; word-break: break-all;">معرف المستخدم (UID): <span style="font-weight: 600;">${user.uid}</span></p>
-                    <button onclick="signOutUser()" style="padding: 12px 24px; background-color: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-family: 'Cairo', sans-serif; transition: background-color 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        تسجيل الخروج
-                    </button>
-                `;
-            } else {
-                // User is not logged in
-                profileContentDiv.innerHTML = `
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
-                        أنت ليس لديك ملف شخصي. قم الآن بتسجيل الدخول أو إنشاء حساب.
-                    </p>
-                    <button onclick="signInWithGoogle()" style="padding: 12px 24px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-family: 'Cairo', sans-serif; transition: background-color 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        تسجيل الدخول باستخدام جوجل
-                    </button>
-                `;
-            }
-        };
-
-        // Function to save/update user profile in Firestore
-        window.saveUserProfile = async (user) => {
-            if (!window.firebaseDb || !user) return;
-            const userId = user.uid;
-            // Construct the document reference using the global appId
-            const userDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/profile`, 'data');
-
-            const profileData = {
-                uid: user.uid,
-                displayName: user.displayName || null,
-                email: user.email || null,
-                photoURL: user.photoURL || null,
-                lastLogin: new Date().toISOString()
-            };
-
-            try {
-                await setDoc(userDocRef, profileData, { merge: true });
-                console.log('User profile saved/updated in Firestore:', userId);
-            } catch (e) {
-                console.error('Error saving user profile to Firestore:', e);
-            }
-        };
-
-        // Function to get user points from Firestore
-        window.getPoints = async () => {
-            // Ensure Firebase is ready and user is logged in before attempting to fetch points
-            if (!window.firebaseDb || !window.currentUserId || !isAuthReady) {
-                console.warn('Cannot fetch points: Firebase not ready or user not logged in.');
-                window.currentPoints = 0; // Default to 0 if not logged in
-                updatePointsDisplay();
-                return;
-            }
-            const userId = window.currentUserId;
-            // Construct the document reference using the global appId
-            const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
-
-            try {
-                const docSnap = await getDoc(pointsDocRef);
-                if (docSnap.exists()) {
-                    window.currentPoints = docSnap.data().value || 0;
-                    console.log('User points fetched from Firestore:', window.currentPoints);
-                } else {
-                    // If no points document exists, initialize it to 0
-                    await setDoc(pointsDocRef, { value: 0 });
-                    window.currentPoints = 0;
-                    console.log('Points document created and initialized to 0 for user:', userId);
-                }
-            } catch (e) {
-                console.error('Error fetching or initializing user points from Firestore:', e);
-                window.currentPoints = 0; // Fallback to 0 on error
-            } finally {
-                updatePointsDisplay(); // Always update display after attempt
-            }
-        };
-
-        // Function to update user points in Firestore
-        window.updatePoints = async (newPoints) => {
-            // Ensure Firebase is ready and user is logged in before attempting to update points
-            if (!window.firebaseDb || !window.currentUserId || !isAuthReady) {
-                console.warn('Cannot update points: Firebase not ready or user not logged in.');
-                const pointsDisplayElement = document.getElementById('points-display');
-                if (pointsDisplayElement) {
-                    pointsDisplayElement.textContent = 'الرجاء تسجيل الدخول!'; // Message to user
-                    pointsDisplayElement.style.backgroundColor = '#dc3545'; // Red background for error
-                    setTimeout(() => {
-                        updatePointsDisplay(); // Revert display after a short delay
-                        pointsDisplayElement.style.backgroundColor = 'var(--active-bg)'; // Revert background
-                    }, 2000);
-                }
-                return;
-            }
-            const userId = window.currentUserId;
-            // Construct the document reference using the global appId
-            const pointsDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/points`, 'data');
-
-            try {
-                await setDoc(pointsDocRef, { value: newPoints }, { merge: true });
-                window.currentPoints = newPoints;
-                updatePointsDisplay(); // Update the displayed points immediately
-                console.log(`Points updated to ${newPoints} for user: ${userId}`);
-                // Add a subtle visual feedback for successful update
-                const pointsDisplayElement = document.getElementById('points-display');
-                if (pointsDisplayElement) {
-                    pointsDisplayElement.style.transform = 'scale(1.1)'; // Slight scale animation
-                    pointsDisplayElement.style.transition = 'transform 0.2s ease-out';
-                    setTimeout(() => {
-                        pointsDisplayElement.style.transform = 'scale(1)'; // Revert scale
-                    }, 300);
-                }
-            } catch (e) {
-                console.error('Error updating user points in Firestore:', e);
-                const pointsDisplayElement = document.getElementById('points-display');
-                if (pointsDisplayElement) {
-                    pointsDisplayElement.textContent = 'خطأ في التحديث!'; // Message to user
-                    pointsDisplayElement.style.backgroundColor = '#dc3545'; // Red background for error
-                    setTimeout(() => {
-                        updatePointsDisplay(); // Revert display after a short delay
-                        pointsDisplayElement.style.backgroundColor = 'var(--active-bg)'; // Revert background
-                    }, 2000);
-                }
-            }
-        };
-
-        // Function to fetch completed exams for the current user
-        async function fetchCompletedExams() {
-            if (!window.firebaseDb || !window.currentUserId || !isAuthReady) {
-                console.warn('Cannot fetch completed exams: Firebase not ready or user not logged in.');
-                completedExamsSet.clear(); // Clear the set if not logged in
-                return;
-            }
-            const userId = window.currentUserId;
-            const completedExamsCollectionRef = collection(window.firebaseDb, `artifacts/${appId}/users/${userId}/completedExams`);
-
-            try {
-                // Use onSnapshot for real-time updates to completed exams
-                onSnapshot(completedExamsCollectionRef, (snapshot) => {
-                    completedExamsSet.clear(); // Clear existing set
-                    snapshot.forEach((doc) => {
-                        completedExamsSet.add(doc.id); // Add examId to the set
-                    });
-                    console.log('Completed exams fetched:', completedExamsSet);
-                    // Re-load exams on the UI to reflect changes
-                    loadExams();
-                }, (error) => {
-                    console.error('Error fetching completed exams:', error);
-                    completedExamsSet.clear(); // Clear on error
-                });
-            } catch (e) {
-                console.error('Error setting up onSnapshot for completed exams:', e);
-                completedExamsSet.clear(); // Clear on error
-            }
-        }
-
-        // Function to load exams from Firestore and display them
-        window.loadExams = () => {
-            if (!window.firebaseDb) {
-                console.warn('Firebase Firestore not initialized. Cannot load exams.');
-                return;
-            }
-
-            const examsContainer = document.getElementById('exams-cards-container');
-            if (!examsContainer) {
-                console.error('Exams container not found.');
-                return;
-            }
-
-            // Clear existing exams to prevent duplicates on re-load
-            examsContainer.innerHTML = '<div class="loading-indicator">جاري تحميل الامتحانات...</div>';
-
-            const examsCollectionRef = collection(window.firebaseDb, `artifacts/${appId}/public/data/exams`);
-
-            // Listen for real-time updates to the exams collection
-            onSnapshot(examsCollectionRef, (snapshot) => {
-                examsContainer.innerHTML = ''; // Clear existing exams
-                if (snapshot.empty) {
-                    examsContainer.innerHTML = '<p class="text-gray-600">لا توجد امتحانات متاحة حاليًا.</p>';
-                    return;
-                }
-
-                snapshot.forEach((doc) => {
-                    const exam = doc.data();
-                    const examId = doc.id; // Get the document ID for potential future use (e.g., starting exam)
-
-                    // Check if the exam is completed by the current user
-                    if (completedExamsSet.has(examId)) {
-                        console.log(`Exam ${examId} is completed, skipping display.`);
-                        return; // Skip this exam
-                    }
-
-                    const examCard = document.createElement('div');
-                    examCard.className = 'exam-card';
-                    examCard.innerHTML = `
-                        <h3 class="exam-card-title">${exam.name}</h3>
-                        <p class="exam-card-info">المدة: ${exam.duration} دقيقة</p>
-                        <p class="exam-card-info">عدد الأسئلة: ${exam.numQuestions}</p>
-                        <button class="exam-start-button" data-exam-id="${examId}">ابدأ الاختبار</button>
-                    `;
-                    examsContainer.appendChild(examCard);
-                });
-
-                // Add event listeners to "Start Exam" buttons
-                document.querySelectorAll('.exam-start-button').forEach(button => {
-                    button.addEventListener('click', (event) => {
-                        const examId = event.target.dataset.examId;
-                        startExam(examId); // Call the new startExam function
-                    });
-                });
-            }, (error) => {
-                console.error('Error fetching exams:', error);
-                examsContainer.innerHTML = '<p class="text-red-500">حدث خطأ أثناء تحميل الامتحانات.</p>';
-            });
-        };
-
-        // Function to display messages to the user (replacement for alert)
-        function showMessageBox(message, type = 'info') {
-            const messageBox = document.getElementById('custom-message-box');
-            if (!messageBox) {
-                console.error('Message box element not found.');
-                return;
-            }
-
-            messageBox.textContent = message;
-            messageBox.className = 'custom-message-box'; // Reset classes
-            if (type === 'success') {
-                messageBox.classList.add('success');
-            } else if (type === 'error') {
-                messageBox.classList.add('error');
-            } else {
-                messageBox.classList.add('info');
-            }
-            messageBox.style.display = 'block';
-            messageBox.style.opacity = '1';
-
-            // Hide after 3 seconds
-            setTimeout(() => {
-                messageBox.style.opacity = '0';
-                setTimeout(() => {
-                    messageBox.style.display = 'none';
-                }, 500); // Wait for fade out transition
-            }, 3000);
-        }
-
-        // --- Exam Taking Logic ---
-        async function startExam(examId) {
-            if (!window.firebaseDb) {
-                showMessageBox('خطأ: لم يتم تهيئة قاعدة البيانات.', 'error');
-                return;
-            }
-            // Removed the window.currentUserId check here to allow non-logged-in users to start exams.
-            // Point handling for non-logged-in users is managed in submitExam.
-
-            // Hide all sections and show exam taking section
-            showTab('exam-taking-section'); // This will handle hiding other sections
-
-            const examTitleElement = document.getElementById('exam-taking-title');
-            const examTimerElement = document.getElementById('exam-timer');
-            const questionsDisplayContainer = document.getElementById('questions-display-container');
-            const submitExamButton = document.getElementById('submit-exam-button');
-            // const examResultsElement = document.getElementById('exam-results'); // This element is removed
-
-            examTitleElement.textContent = 'جاري تحميل الامتحان...';
-            examTimerElement.textContent = '';
-            questionsDisplayContainer.innerHTML = '<div class="loading-indicator">جاري تحميل الأسئلة...</div>';
-            submitExamButton.style.display = 'none';
-            // examResultsElement.innerHTML = ''; // This line is no longer needed
-
-            examTimerElement.classList.remove('timer-warning'); // Ensure timer is not red initially
-
-            try {
-                const examDocRef = doc(window.firebaseDb, `artifacts/${appId}/public/data/exams`, examId);
-                const docSnap = await getDoc(examDocRef);
-
-                if (docSnap.exists()) {
-                    currentExamData = docSnap.data();
-                    currentExamData.id = docSnap.id; // Store exam ID
-                    examTitleElement.textContent = `اختبار: ${currentExamData.name}`;
-
-                    renderExamQuestions(currentExamData.questions);
-                    startTimer(currentExamData.duration); // Duration in minutes
-                    submitExamButton.style.display = 'block';
-                    // Pass a flag to submitExam to indicate manual submission
-                    submitExamButton.onclick = () => submitExam('manual');
-
-                } else {
-                    showMessageBox('الامتحان غير موجود.', 'error');
-                    showTab('exams'); // Go back to exams list
-                }
-            } catch (error) {
-                console.error('Error loading exam:', error);
-                showMessageBox('حدث خطأ أثناء تحميل الامتحان.', 'error');
-                showTab('exams'); // Go back to exams list
-            }
-        }
-
-        function renderExamQuestions(questions) {
-            const questionsDisplayContainer = document.getElementById('questions-display-container');
-            questionsDisplayContainer.innerHTML = ''; // Clear existing questions
-            userAnswers = new Array(questions.length).fill(null); // Initialize userAnswers for this exam
-
-            questions.forEach((q, qIndex) => {
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'exam-question-card';
-                questionDiv.innerHTML = `
-                    <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
-                    <div class="options-container" id="options-q-${qIndex}">
-                        ${q.options.map((option, optIndex) => `
-                            <label class="option-label">
-                                <input type="radio" name="question-${qIndex}" value="${optIndex}" class="option-radio" data-question-index="${qIndex}">
-                                <span>${option}</span>
-                            </label>
-                        `).join('')}
-                    </div>
-                `;
-                questionsDisplayContainer.appendChild(questionDiv);
-
-                // Add event listener for deselect functionality and real-time answer tracking
-                const optionsContainer = document.getElementById(`options-q-${qIndex}`);
-                optionsContainer.addEventListener('click', (event) => {
-                    const clickedRadio = event.target.closest('input[type="radio"]');
-                    if (clickedRadio) {
-                        // Corrected: Use dataset.questionIndex (camelCase)
-                        const questionIndex = parseInt(clickedRadio.dataset.questionIndex);
-                        const selectedOptionIndex = parseInt(clickedRadio.value);
-
-                        // If the clicked radio was already checked and is now being clicked again, deselect it
-                        if (userAnswers[questionIndex] === selectedOptionIndex) {
-                            clickedRadio.checked = false; // Visually uncheck
-                            userAnswers[questionIndex] = null; // Clear answer
-                        } else {
-                            // Otherwise, it's a new selection or re-selection after deselection
-                            userAnswers[questionIndex] = selectedOptionIndex;
-                        }
-                        console.log(`Question ${questionIndex} answer: ${userAnswers[questionIndex]}`);
-                    }
-                });
-            });
-        }
-
-        function startTimer(durationMinutes) {
-            examDurationSeconds = durationMinutes * 60;
-            examStartTime = Date.now();
-            const examTimerElement = document.getElementById('exam-timer');
-
-            // Clear any existing timer to prevent multiple timers running
-            if (examTimerInterval) {
-                clearInterval(examTimerInterval);
-            }
-
-            examTimerInterval = setInterval(() => {
-                const elapsedTime = Math.floor((Date.now() - examStartTime) / 1000);
-                const remainingTime = examDurationSeconds - elapsedTime;
-
-                if (remainingTime <= 0) {
-                    clearInterval(examTimerInterval);
-                    examTimerElement.textContent = 'انتهى الوقت!';
-                    examTimerElement.classList.remove('timer-warning'); // Remove warning color
-                    submitExam('timeUp'); // Submit automatically when time runs out
-                    return;
-                }
-
-                const minutes = Math.floor(remainingTime / 60);
-                const seconds = remainingTime % 60;
-                examTimerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-                // MODIFIED: Change timer color to red for the last 25% of the time
-                const warningThreshold = examDurationSeconds * 0.25;
-                if (remainingTime <= warningThreshold) {
-                    examTimerElement.classList.add('timer-warning');
-                } else {
-                    examTimerElement.classList.remove('timer-warning');
-                }
-
-            }, 1000);
-        }
-
-        async function submitExam(submissionType = 'manual') { // Added submissionType parameter
-            if (examTimerInterval) {
-                clearInterval(examTimerInterval);
-            }
-
-            const submitButton = document.getElementById('submit-exam-button');
-            submitButton.disabled = true; // Prevent multiple submissions
-            submitButton.textContent = 'جاري الإرسال...'; // Changed to 'جاري الإرسال...' temporarily
-
-            const questionsDisplayContainer = document.getElementById('questions-display-container');
-
-            // 1. Validate all questions are answered
-            // Use the pre-populated userAnswers array
-            let allAnswered = userAnswers.every(answer => answer !== null);
-
-            if (!allAnswered && submissionType === 'manual') { // Only check for manual submission
-                showMessageBox('الرجاء إنهاء جميع الأسئلة قبل التسليم!', 'error');
-                submitButton.disabled = false;
-                submitButton.textContent = 'تسليم'; // Revert button text
-                return;
-            }
-
-            questionsDisplayContainer.innerHTML = '<div class="loading-indicator">جاري حساب النتيجة...</div>';
-
-            let correctAnswersCount = 0;
-            const totalQuestions = currentExamData.questions.length;
-
-            currentExamData.questions.forEach((q, qIndex) => {
-                if (userAnswers[qIndex] !== null && userAnswers[qIndex] === q.correctOptionIndex) {
-                    correctAnswersCount++;
-                }
-            });
-
-            const score = correctAnswersCount;
-            const pointsEarned = correctAnswersCount * 10; // Example: 10 points per correct answer
-            const percentageScore = (totalQuestions > 0) ? ((score / totalQuestions) * 100).toFixed(1) : 0;
-
-            // 2. Update user points in Firestore (only if logged in)
-            if (window.currentUserId) {
-                await window.updatePoints(window.currentPoints + pointsEarned);
-                showMessageBox(`تم إضافة ${pointsEarned} نقطة إلى رصيدك!`, 'success');
-
-                // Record exam completion
-                const userId = window.currentUserId;
-                const examId = currentExamData.id;
-                const completedExamDocRef = doc(window.firebaseDb, `artifacts/${appId}/users/${userId}/completedExams`, examId);
-                try {
-                    await setDoc(completedExamDocRef, { completedAt: new Date().toISOString() }, { merge: true });
-                    console.log(`Exam ${examId} marked as completed for user ${userId}.`);
-                    // The onSnapshot in fetchCompletedExams will automatically trigger loadExams to update the list
-                } catch (e) {
-                    console.error('Error marking exam as completed:', e);
-                    showMessageBox('حدث خطأ في حفظ حالة الامتحان المكتمل.', 'error');
-                }
-
-            } else {
-                // User is not logged in, points are not added to their profile
-                showMessageBox('الرجاء تسجيل الدخول لحفظ نقاطك.', 'info');
-            }
-
-            // 3. Display results and review
-            // Pass currentUserId and submissionType to displayExamResults to handle conditional display of points and messages
-            displayExamResults(currentExamData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, window.currentUserId);
-
-            // Hide questions and submit button
-            questionsDisplayContainer.style.display = 'block'; // Ensure container is visible for results
-            submitButton.style.display = 'none';
-            document.getElementById('exam-taking-title').style.display = 'none'; // Hide exam title
-            document.getElementById('exam-timer').style.display = 'none'; // Hide timer from header
-
-            submitButton.disabled = false;
-            submitButton.textContent = 'تسليم'; // Reset button text to 'تسليم'
-        }
-
-        function displayExamResults(examData, userAnswers, score, totalQuestions, pointsEarned, percentageScore, submissionType, userId) {
-            const questionsDisplayContainer = document.getElementById('questions-display-container');
-            questionsDisplayContainer.innerHTML = ''; // Clear existing content
-
-            // Scroll the window to the top to show the results from the beginning
-            window.scrollTo(0, 0);
-
-            let pointsHtml = '';
-            // Removed submissionMessage as requested
-
-            if (userId) {
-                pointsHtml = `<p class="exam-result-points">حصلت على ${pointsEarned} نقطة.</p>`;
-            } else {
-                pointsHtml = `
-                    <p class="exam-result-points points-not-counted">
-                        <span style="text-decoration: line-through; color: var(--incorrect-answer-border);">${pointsEarned} نقطة</span>
-                        <br>
-                        يلزم تسجيل الدخول لاحتساب النقاط.
-                    </p>
-                `;
-            }
-
-            // The summary content is directly placed within the questionsDisplayContainer
-            questionsDisplayContainer.innerHTML = `
-                <div class="exam-summary-floating">
-                    <h2 class="exam-result-title">نتيجتك:</h2>
-                    <p class="exam-result-score">أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
-                    <p class="exam-result-percentage">النسبة المئوية: ${percentageScore}%</p>
-                    ${pointsHtml}
-                </div>
-                <div class="exam-review-container">
-                    <h3>مراجعة الامتحان:</h3>
-                </div>
-                <button class="back-to-exams-button" onclick="showTab('exams');">العودة</button>
-            `;
-
-            const reviewContainer = questionsDisplayContainer.querySelector('.exam-review-container');
-
-            examData.questions.forEach((q, qIndex) => {
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'exam-question-card review-mode'; // Add review-mode class for styling individual review cards
-                questionDiv.innerHTML = `
-                    <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
-                    <div class="options-container">
-                        ${q.options.map((option, optIndex) => {
-                            let labelClass = 'option-label';
-                            let checkedAttr = '';
-                            let disabledAttr = 'disabled'; // Disable all inputs in review mode
-
-                            // Check if this is the correct answer
-                            if (optIndex === q.correctOptionIndex) {
-                                labelClass += ' correct-answer';
-                            }
-
-                            // Check if this was the user's selected answer
-                            if (userAnswers[qIndex] !== null && optIndex === userAnswers[qIndex]) {
-                                checkedAttr = 'checked';
-                                if (optIndex !== q.correctOptionIndex) {
-                                    labelClass += ' user-incorrect-answer'; // User selected this and it's wrong
-                                } else {
-                                    labelClass += ' user-correct-answer'; // User selected this and it's right
-                                }
-                            }
-
-                            return `
-                                <label class="${labelClass}">
-                                    <input type="radio" name="review-question-${qIndex}" value="${optIndex}" ${checkedAttr} ${disabledAttr} class="option-radio">
-                                    <span>${option}</span>
-                                </label>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-                reviewContainer.appendChild(questionDiv);
-            });
-        }
-
-        // --- Notifications Logic ---
-        window.loadNotifications = () => {
-            if (!window.firebaseDb) {
-                console.warn('Firebase Firestore not initialized. Cannot load notifications.');
-                return;
-            }
-
-            const notificationsContainer = document.getElementById('notifications-container');
-            if (!notificationsContainer) {
-                console.error('Notifications container not found.');
-                return;
-            }
-
-            notificationsContainer.innerHTML = '<div class="loading-indicator">جاري تحميل الإشعارات...</div>';
-
-            // Reference to the public notifications collection
-            const notificationsCollectionRef = collection(window.firebaseDb, `artifacts/${appId}/public/data/notifications`);
-
-            // Listen for real-time updates to the notifications collection
-            onSnapshot(notificationsCollectionRef, (snapshot) => {
-                notificationsContainer.innerHTML = ''; // Clear existing notifications
-                if (snapshot.empty) {
-                    notificationsContainer.innerHTML = '<p class="text-gray-600">لا توجد إشعارات حاليًا.</p>';
-                    return;
-                }
-
-                // Sort notifications by createdAt timestamp in descending order (newest first)
-                const sortedNotifications = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    // Ensure createdAt exists and is a valid timestamp
-                    if (data.createdAt && data.createdAt.toDate) {
-                        sortedNotifications.push({ id: doc.id, ...data, createdAt: data.createdAt.toDate() });
-                    } else {
-                        // Handle cases where createdAt might be missing or not a timestamp
-                        sortedNotifications.push({ id: doc.id, ...data, createdAt: new Date(0) }); // Fallback to epoch
-                    }
-                });
-
-                sortedNotifications.sort((a, b) => b.createdAt - a.createdAt); // Sort newest first
-
-                sortedNotifications.forEach((notification) => {
-                    const notificationCard = document.createElement('div');
-                    notificationCard.className = 'notification-card';
-
-                    // Format timestamp for display
-                    const date = notification.createdAt;
-                    const formattedDate = date.toLocaleDateString('ar-EG', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-
-                    notificationCard.innerHTML = `
-                        <p class="notification-message">${notification.message}</p>
-                        <span class="notification-timestamp">تاريخ النشر: ${formattedDate}</span>
-                    `;
-                    notificationsContainer.appendChild(notificationCard);
-                });
-            }, (error) => {
-                console.error('Error fetching notifications:', error);
-                notificationsContainer.innerHTML = '<p class="text-red-500">حدث خطأ أثناء تحميل الإشعارات.</p>';
-            });
-        };
-
-
-    </script>
     <style>
         :root {
             --primary-color: #007bff;
@@ -1007,320 +263,18 @@
         .bottom-nav button span {
             margin-top: 4px;
         }
-
-        /* تنسيق بطاقات الصفحة الرئيسية */
-        .home-cards-container {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: nowrap;
-        }
-
-        .card {
-            width: 40%;
-            min-width: 120px;
-            aspect-ratio: 1 / 1;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px var(--card-shadow);
-            position: relative;
-            padding: 1rem;
-            text-align: right;
-            cursor: pointer;
-            transition: transform 0.1s ease-in-out, box-shadow 0.3s ease;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-        }
-
-        .card:active {
-            transform: scale(0.97);
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: white;
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-        }
-
-        .card-description {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.8);
-            position: absolute;
-            top: 3.5rem;
-            right: 1rem;
-        }
-
-        .card svg {
-            position: absolute;
-            bottom: 1rem;
-            left: 1rem;
-            width: 36px;
-            height: 36px;
-        }
-
-        .store-card {
-            background-color: #FFD700;
-        }
-
-        .summaries-card {
-            background-color: #00A693;
-        }
-
-        /* تنسيق صفحة الإعدادات */
-        .settings-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: var(--background-color);
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: background-color 0.3s ease;
-            margin-bottom: 1rem; /* Added margin for spacing */
-        }
-
-        .settings-item span {
-            font-size: 1rem;
-            color: var(--text-color);
-        }
-
-        /* تنسيق مفتاح الوضع الداكن */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 28px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 28px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--primary-color);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(22px);
-        }
-
-        /* تنسيق القائمة المنسدلة */
-        .more-menu-container {
-            position: relative;
-            cursor: pointer;
-            margin-left: 1rem;
-        }
-
-        #more-menu-icon {
-            width: 24px;
-            height: 24px;
-            color: var(--secondary-color);
-            stroke: currentColor;
-            fill: none;
-            transition: transform 0.1s ease-in-out;
-        }
-
-        #more-menu-icon:active {
-            transform: scale(0.9);
-        }
-
-        #more-menu-dropdown {
-            display: none;
-            position: absolute;
-            top: 45px;
-            right: auto;
-            left: 0;
-            min-width: 150px;
-            background-color: var(--dropdown-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 1001;
-            padding: 8px 0;
-            text-align: right;
-        }
-
-        #more-menu-dropdown.active {
-            display: block;
-        }
-
-        .dropdown-item {
-            display: block;
-            padding: 10px 16px;
-            color: var(--text-color);
-            text-decoration: none;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        /* تم تغيير لون الخلفية عند الضغط هنا */
-        .dropdown-item:active {
-            background-color: var(--active-bg);
-        }
-
-        /* New styles for Subject Tabs */
-        .subject-tabs-container {
-            display: flex;
-            overflow-x: auto;
-            padding-bottom: 8px; /* Space for scrollbar if it appears */
-            margin-bottom: 1rem;
-            gap: 8px; /* Space between tabs */
-            justify-content: flex-start; /* Align tabs to start, allowing scroll */
-            padding-right: 1.25rem; /* Padding at the right end for scroll visibility */
-            padding-left: 1.25rem; /* Padding at the left end for scroll visibility */
-            margin-right: -1.25rem; /* Compensate for padding to extend to edge */
-            margin-left: -1.25rem; /* Compensate for padding to extend to edge */
-        }
-
-        .subject-tab {
-            position: relative;
-            flex-shrink: 0; /* Prevent shrinking */
-            width: 140px; /* Fixed width for consistent size on mobile */
-            height: 60px; /* Fixed height for consistent size */
-            padding: 0; /* Padding handled by internal elements */
-            border-radius: 12px; /* Rounded corners like the settings item */
-            font-size: 1rem;
-            font-weight: 500;
-            text-align: center;
-            cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            background-color: var(--background-color); /* Unified background like settings item */
-            color: var(--text-color); /* Default text color */
-            box-shadow: 0 2px 4px var(--card-shadow); /* Subtle shadow for all tabs */
-            transition: background-color 0.3s ease, color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
-            overflow: hidden; /* Hide overflow for SVG background */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid var(--border-color); /* Border like the settings item */
-        }
-
-        .subject-tab:active {
-            transform: scale(0.97);
-        }
-
-        /* Active state for all tabs */
-        .subject-tab.active {
-            background-color: var(--primary-color); /* Primary blue for active tab */
-            color: #ffffff; /* White text when active */
-            border-color: var(--primary-color); /* Active border color */
-        }
-        .subject-tab.active .subject-icon-bg svg {
-            fill: #ffffff; /* White icon when active */
-        }
-        .subject-tab .subject-icon-bg svg {
-            fill: var(--inactive-color); /* Inactive icon color */
-        }
-        body.dark-mode .subject-tab .subject-icon-bg svg {
-            fill: var(--secondary-color); /* Dark mode inactive icon color */
-        }
-
-
-        .subject-tab .subject-icon-bg {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.08; /* Very subtle background */
-            transition: opacity 0.3s ease;
-        }
-
-        .subject-tab.active .subject-icon-bg {
-            opacity: 0.15; /* Slightly more visible when active */
-        }
-
-        .subject-tab .subject-icon-bg svg {
-            width: 60px; /* Larger SVG for background */
-            height: 60px;
-            stroke: none;
-        }
-
-        .subject-tab span {
-            position: relative; /* Ensure text is above SVG */
-            z-index: 1;
-            padding: 0 16px; /* Add padding to text itself */
-            font-weight: 700; /* Made font bolder (700 for Cairo) */
-        }
-
-        /* Removed border from subject content area */
-        .subject-content-area {
-            background-color: var(--active-bg);
-            padding: 1.5rem;
-            border-radius: 8px;
-            text-align: right;
-            min-height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* Add overflow-x hidden to prevent horizontal scrollbar from appearing on content */
-            overflow-x: hidden;
-            position: relative; /* Needed for absolute positioning of content for transitions */
-        }
-
-        /* Keyframes for spin animation */
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .animate-spin-infinite {
-          animation: spin 1s linear infinite; /* Continuous spin */
-        }
-
-        /* Custom Scrollbar Hide */
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-
-        /* New styles for Exam Cards */
-        .exams-grid-container {
+        
+        .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Responsive grid */
-            gap: 1.5rem; /* Space between cards */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
             padding: 1rem;
-            max-width: 1000px; /* Max width for the grid */
-            margin: 0 auto; /* Center the grid */
-            text-align: right; /* Align text inside cards to the right */
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: right;
         }
 
-        .exam-card {
+        .item-card {
             background-color: var(--background-color);
             border-radius: 12px;
             box-shadow: 0 4px 12px var(--card-shadow);
@@ -1328,30 +282,22 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
             border: 1px solid var(--border-color);
+            transition: transform 0.2s ease;
         }
+        .item-card:hover { transform: translateY(-5px); }
 
-        .exam-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-        }
-
-        .exam-card-title {
+        .item-card-title {
             font-size: 1.4rem;
             font-weight: 700;
             color: var(--primary-color);
-            margin-bottom: 0.5rem;
         }
-
-        .exam-card-info {
+        .item-card-info {
             font-size: 0.95rem;
             color: var(--text-color);
-            margin-bottom: 0.25rem;
         }
-
-        .exam-start-button {
-            background-color: #28a745; /* Green for start button */
+        .start-button {
+            background-color: #28a745;
             color: white;
             padding: 0.75rem 1.25rem;
             border: none;
@@ -1360,16 +306,7 @@
             font-size: 1rem;
             font-weight: 600;
             margin-top: 1rem;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            align-self: flex-end; /* Align button to the right within the card */
-        }
-
-        .exam-start-button:hover {
-            background-color: #218838;
-        }
-
-        .exam-start-button:active {
-            transform: scale(0.98);
+            align-self: flex-start;
         }
 
         .loading-indicator {
@@ -1396,20 +333,9 @@
             text-align: right;
         }
 
-        .custom-message-box.info {
-            background-color: #e0f7fa;
-            color: #006064;
-        }
-
-        .custom-message-box.success {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .custom-message-box.error {
-            background-color: #ffebee;
-            color: #c62828;
-        }
+        .custom-message-box.info { background-color: #e0f7fa; color: #006064; }
+        .custom-message-box.success { background-color: #e8f5e9; color: #2e7d32; }
+        .custom-message-box.error { background-color: #ffebee; color: #c62828; }
 
         /* Exam Taking Section Styles */
         #exam-taking-section {
@@ -1427,7 +353,6 @@
             text-align: center;
         }
 
-        /* MODIFIED: Timer is now on the left of the header during exams */
         .exam-timer-display {
             font-size: 1.2rem;
             font-weight: 600;
@@ -1480,11 +405,6 @@
             border: 1px solid var(--border-color);
         }
 
-        .option-label:hover {
-            background-color: #dbeafe; /* Light blue on hover */
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
-
         .option-radio {
             margin-left: 0.75rem; /* Space between radio and text */
             transform: scale(1.2); /* Slightly larger radio button */
@@ -1498,7 +418,7 @@
             flex-grow: 1; /* Allow text to take available space */
         }
 
-        #submit-exam-button {
+        #submit-exam-button, .back-to-exams-button {
             background-color: #007bff; /* Primary blue */
             color: white;
             padding: 1rem 2rem;
@@ -1515,246 +435,51 @@
             margin-right: auto; /* Center button */
             display: block; /* Ensure it's a block element for centering */
         }
-
-        #submit-exam-button:hover {
-            background-color: #0056b3;
-        }
-
-        #submit-exam-button:active {
-            transform: scale(0.98);
-        }
-
-        /* New style for the floating summary (no background/shadow) */
+        
         .exam-summary-floating {
             text-align: center;
-            margin-bottom: 2rem; /* Space between summary and review questions */
-            padding: 1rem; /* Add some padding for content spacing */
-            /* No background, border, or shadow here as per request */
-        }
-
-        .exam-summary-floating .exam-result-title {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--primary-color); /* Ensure title is primary color */
-        }
-        .exam-summary-floating .exam-result-score,
-        .exam-summary-floating .exam-result-points,
-        .exam-summary-floating .exam-result-percentage { /* Removed submission message from here */
-            font-size: 1.2rem;
-            margin-bottom: 0.75rem;
-            color: var(--text-color); /* Ensure text within summary is theme text color */
-        }
-        .exam-summary-floating .points-not-counted {
-            color: var(--secondary-color); /* Secondary color for this specific text */
-        }
-        .exam-summary-floating .points-not-counted span {
-            color: var(--incorrect-answer-border); /* Use a light red from theme for strike-through */
-        }
-
-        /* Make questions-display-container a flex column to push button to bottom */
-        #questions-display-container {
-            display: flex;
-            flex-direction: column;
-            min-height: calc(100vh - 50px - 2rem - 2rem); /* Header + top/bottom padding */
-            /* Adjusted to account for the header bar and padding */
-            padding-top: 1.5rem; /* Add some top padding */
+            margin-bottom: 2rem;
+            padding: 1rem;
         }
 
         .exam-review-container {
             margin-top: 2rem;
             padding-top: 1.5rem;
-            border-top: 1px dashed var(--border-color); /* Border color from theme */
-            text-align: right; /* Align review questions to the right */
-            flex-grow: 1; /* Allow review container to take available space */
-        }
-
-        .exam-review-container h3 {
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            color: var(--primary-color); /* Consistent with other titles */
-        }
-
-        /* Styles for correct and incorrect answers in review mode within the white/dark grey background */
-        .exam-question-card.review-mode .option-label.correct-answer {
-            background-color: var(--correct-answer-bg); /* Green from theme */
-            border-color: var(--correct-answer-border); /* Green border from theme */
-            color: var(--text-color); /* Text color from theme */
-        }
-
-        .exam-question-card.review-mode .option-label.user-incorrect-answer {
-            background-color: var(--incorrect-answer-bg); /* Red from theme */
-            border-color: var(--incorrect-answer-border); /* Red border from theme */
-            color: var(--text-color); /* Text color from theme */
-        }
-
-        .exam-question-card.review-mode .option-label {
-            background-color: var(--active-bg); /* Light blue background for options */
-            color: var(--text-color); /* Text color from theme */
-            border-color: var(--border-color); /* Border color from theme */
-        }
-
-        .exam-question-card.review-mode .option-label span {
-            color: var(--text-color); /* Ensure option text is theme text color */
-        }
-
-        .exam-question-card.review-mode .option-radio {
-            accent-color: var(--primary-color); /* Make radio button primary color */
-        }
-
-        /* Style for the back-to-exams-button in the results page */
-        .back-to-exams-button {
-            background-color: var(--primary-color); /* Primary blue */
-            color: white;
-            padding: 1rem 2rem; /* Same padding as submit button */
-            border: none;
-            border-radius: 12px; /* Same border-radius as submit button */
-            cursor: pointer;
-            font-size: 1.1rem; /* Same font-size as submit button */
-            font-weight: 600;
-            margin-top: 2rem; /* Same margin-top as submit button */
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            width: 100%;
-            max-width: 300px; /* Same max-width as submit button */
-            margin-left: auto; /* Center button */
-            margin-right: auto; /* Center button */
-            display: block; /* Ensure it's a block element for centering */
-        }
-
-        .back-to-exams-button:hover {
-            background-color: #0056b3; /* Darker blue on hover */
-        }
-
-        .back-to-exams-button:active {
-            transform: scale(0.98);
-        }
-
-        /* Media query for smaller screens (mobile and tablets) */
-        @media (max-width: 1024px) {
-            /* Override main's padding for exam-taking-section to allow it to be wider */
-            main:has(#exam-taking-section.active) {
-                padding-left: 0.5rem; /* Add small padding to main */
-                padding-right: 0.5rem; /* Add small padding to main */
-            }
-
-            #exam-taking-section {
-                padding-left: 0; /* No padding here, main handles it */
-                padding-right: 0; /* No padding here, main handles it */
-                max-width: 100%; /* Ensure it spans full width */
-            }
-
-            .exam-question-card {
-                width: calc(100% - 1rem); /* 100% minus 0.5rem margin on each side */
-                margin-left: 0.5rem; /* Add 0.5rem margin */
-                margin-right: 0.5rem; /* Add 0.5rem margin */
-                box-sizing: border-box; /* Include padding in width calculation */
-                border-radius: 12px; /* Keep rounded corners */
-            }
-
-            /* Font size adjustments for tablets */
-            @media (min-width: 769px) and (max-width: 1024px) {
-                .question-text {
-                    font-size: 1.15rem; /* Slightly larger for tablets */
-                }
-
-                .option-label span {
-                    font-size: 1.05rem; /* Slightly larger for tablets */
-                }
-
-                .exam-summary-floating .exam-result-score,
-                .exam-summary-floating .exam-result-points,
-                .exam-summary-floating .exam-result-percentage {
-                    font-size: 1.3rem; /* Larger for tablets */
-                }
-
-                .exam-summary-floating .exam-result-title {
-                    font-size: 2.2rem; /* Larger for tablets */
-                }
-            }
-        }
-
-        /* MODIFIED: Styles specifically for when exam-taking-section is active */
-        body:has(#exam-taking-section.active) #header-bar {
-            justify-content: space-between;
-        }
-
-        body:has(#exam-taking-section.active) .header-start-elements {
-            display: flex;
-        }
-
-        body:has(#exam-taking-section.active) #back-arrow {
-            display: block;
-        }
-
-        body:has(#exam-taking-section.active) #points-display {
-            display: none;
-        }
-
-        body:has(#exam-taking-section.active) #exam-timer {
-            display: flex; /* Timer is now visible */
-            /* Removed centering properties, space-between on parent handles positioning */
-        }
-
-        body:has(#exam-taking-section.active) .header-end-elements {
-            display: none; /* More menu is hidden */
-        }
-
-        /* New styles for Notifications section */
-        .notifications-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem; /* Space between notification cards */
-            padding: 1rem;
-            max-width: 800px; /* Max width for readability */
-            margin: 0 auto; /* Center the container */
+            border-top: 1px dashed var(--border-color);
             text-align: right;
+            flex-grow: 1;
         }
-
-        .notification-card {
-            background-color: var(--background-color);
-            border-radius: 12px;
-            box-shadow: 0 4px 12px var(--card-shadow);
+        
+        /* Profile Section Specific Styles */
+        #profile-content-area {
+            background-color: var(--active-bg);
             padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            min-height: 150px;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .notification-message {
-            font-size: 1.05rem;
-            color: var(--text-color);
-            line-height: 1.6;
-            margin-bottom: 0.5rem;
-        }
-
-        .notification-timestamp {
-            font-size: 0.85rem;
-            color: var(--secondary-color);
-            text-align: left; /* Align timestamp to the left */
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px var(--card-shadow);
         }
     </style>
 </head>
 <body class="">
 
     <header id="header-bar">
-        <div class="header-start-elements"> <!-- For back-arrow and points -->
-            <!-- Changed to feather-arrow-right for RTL back navigation -->
+        <div class="header-start-elements">
             <svg id="back-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right" style="display: none;">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
-            <!-- Updated onclick for points-display -->
-            <div class="points-display" id="points-display" onclick="handlePointsDisplayClick()"></div>
+            <div class="points-display" id="points-display"></div>
         </div>
-        <div id="exam-timer" class="exam-timer-display"></div> <!-- Moved here -->
-        <div class="header-end-elements"> <!-- For more-menu -->
+        <div id="exam-timer" class="exam-timer-display"></div>
+        <div class="header-end-elements">
             <div class="more-menu-container">
                 <svg id="more-menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="1"></circle>
-                    <circle cx="12" cy="5" r="1"></circle>
-                    <circle cx="12" cy="19" r="1"></circle>
+                    <circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle>
                 </svg>
                 <div id="more-menu-dropdown" class="">
                     <a class="dropdown-item" onclick="showTab('profile'); toggleMoreMenu();">الملف الشخصي</a>
@@ -1765,531 +490,438 @@
         </div>
     </header>
 
-    <main id="main"> <!-- Added id="main" for scrolling -->
+    <main id="main">
         <section id="home" class="active">
-            <div class="home-cards-container">
-                <a class="card summaries-card" onclick="showTab('summaries')">
-                    <h2 class="card-title">الملخصات</h2>
-                    <p class="card-description">جميع ملخصات المواد بملحقاتها</p>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                        <path d="M6.5 2H20v20H6.5A2.5 2 0 0 1 4 19.5v-15A2.5 2 0 0 1 6.5 2z"></path>
-                        <line x1="10" y1="6" x2="16" y2="6"></line>
-                        <line x1="10" y1="10" x2="16" y2="10"></line>
-                        <line x1="10" y1="14" x2="16" y2="14"></line>
-                    </svg>
-                </a>
-                <a class="card store-card" onclick="showTab('store')">
-                    <h2 class="card-title">المتجر</h2>
-                    <p class="card-description">تقدر ستبدل النقاط هنا</p>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    </svg>
-                </a>
-            </div>
+             <h1>الصفحة الرئيسية</h1>
+             <p>مرحباً بك في الموقع. تنقل بين الأقسام باستخدام الشريط السفلي.</p>
         </section>
 
-        <section id="exams" class="">
-            <h1>أهلاً في صفحة الاختبارات</h1>
-            <div id="exams-cards-container" class="exams-grid-container">
-                <!-- Exam cards will be loaded here dynamically -->
-                <div class="loading-indicator">جاري تحميل الامتحانات...</div>
+        <section id="exams">
+            <h1>الاختبارات</h1>
+            <div id="exams-container" class="grid-container">
+                <div class="loading-indicator">جاري تحميل الاختبارات...</div>
             </div>
         </section>
-
-        <!-- New Section for Exam Taking -->
+        
         <section id="exam-taking-section" class="">
             <h1 id="exam-taking-title"></h1>
-            <div id="questions-display-container">
-                <!-- Exam questions will be rendered here dynamically -->
+            <div id="questions-display-container"></div>
+            <button id="submit-exam-button" style="display: none;">تسليم</button>
+        </section>
+
+        <section id="reviews">
+            <h1>التقييمات</h1>
+            <div id="reviews-container" class="grid-container">
+                <div class="loading-indicator">جاري تحميل التقييمات...</div>
             </div>
-            <button id="submit-exam-button" style="display: none;">تسليم</button> <!-- Changed button text -->
-            <!-- The exam-results div has been removed as per request -->
         </section>
 
-        <section id="reviews" class="">
-            <h1>أهلاً في صفحة التقييمات</h1>
-        </section>
-
-        <section id="profile" class="">
+        <!-- Other sections from original file, now with content containers -->
+        <section id="profile">
             <h1 style="margin-bottom: 2rem;">الملف الشخصي</h1>
-            <div id="profile-content-area" style="background-color: var(--active-bg); padding: 1.5rem; border-radius: 8px; text-align: center; min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 8px var(--card-shadow);">
-                <!-- Content will be dynamically loaded by JavaScript -->
+            <div id="profile-content-area">
+                <!-- Profile content will be loaded here by JS -->
             </div>
         </section>
-
-        <section id="store" class="">
-            <h1>أهلاً في المتجر</h1>
-            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">هنا ستجد المنتجات المتاحة للشراء باستخدام النقاط.</p>
-            <button onclick="addPoints(10)" style="margin-top: 2rem; padding: 10px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer;">
-                إضافة 10 نقاط (للتجربة)
-            </button>
-        </section>
-
-        <section id="summaries" class="">
-            <!-- Horizontal Subject Tabs -->
-            <div class="subject-tabs-container scrollbar-hide">
-                <button class="subject-tab" onclick="showSubjectContent('arabic')">
-                    <div class="subject-icon-bg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 18H5V8h14v10zm-1-9H6v8h12V9zm-1-6H6c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 10h6v2H9v-2zm0 3h6v2H9v-2z" />
-                        </svg>
-                    </div>
-                    <span>اللغة العربية</span>
-                </button>
-                <button class="subject-tab" onclick="showSubjectContent('english')">
-                    <div class="subject-icon-bg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86zm2 0V4.07c3.95.49 7 3.85 7 7.93s-3.05 7.44-7 7.93z" />
-                        </svg>
-                    </div>
-                    <span>اللغة الإنجليزية</span>
-                </button>
-                <button class="subject-tab" onclick="showSubjectContent('physics')">
-                    <div class="subject-icon-bg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/>
-                        </svg>
-                    </div>
-                    <span>فيزيا</span>
-                </button>
-                <button class="subject-tab" onclick="showSubjectContent('chemistry')">
-                    <div class="subject-icon-bg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-6c-1.1 0-2 .9-2 2v5c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V9c0-1.1-.9-2-2-2zm-2 4h-3V9h3v2zM1 1v22h22V1H1zm20 20H3V3h18v18z" />
-                        </svg>
-                    </div>
-                    <span>كيميا</span>
-                </button>
-                <button class="subject-tab" onclick="showSubjectContent('pure-math')">
-                    <div class="subject-icon-bg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-                        </svg>
-                    </div>
-                    <span>البحتة</span>
-                </button>
-                <button class="subject-tab" onclick="showSubjectContent('applied-math')">
-                    <div class="subject-icon-bg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
-                        </svg>
-                    </div>
-                    <span>التطبيقية</span>
-                </button>
-                <button class="subject-tab" onclick="showSubjectContent('history')">
-                    <div class="subject-icon-bg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 4H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-1 16H6V6h12v14zM9 8h6v2H9V8zm0 3h6v2H9v-2zm0 3h4v2H9v-2z"/>
-                        </svg>
-                    </div>
-                    <span>التاريخ</span>
-                </button>
-            </div>
-
-            <!-- Subject Content Area -->
-            <div class="subject-content-area" id="subject-content-area">
-                <div id="arabic-content" class="subject-content active">
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة اللغة العربية تشمل النحو، الصرف، البلاغة، والأدب. يتم التركيز على قواعد الإعراب، تصريف الأفعال، فنون البلاغة مثل التشبيه والاستعارة، وتحليل النصوص الأدبية.</p>
-                </div>
-                <div id="english-content" class="subject-content" style="display: none;">
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة اللغة الإنجليزية تغطي القواعد، المفردات، ومهارات الكتابة. تشمل القواعد الأساسية، بناء الجمل، توسيع المفردات، وكتابة المقالات والرسائل.</p>
-                </div>
-                <div id="physics-content" class="subject-content" style="display: none;">
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة الفيزياء تركز على قوانين الحركة، الطاقة، الكهرباء، والمغناطيسية. تتناول المفاهيم الأساسية مثل القوة، الشغل، القدرة، والدوائر الكهربائية.</p>
-                </div>
-                <div id="chemistry-content" class="subject-content" style="display: none;">
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة الكيمياء تشمل بنية الذرة، الجدول الدوري، أنواع الروابط الكيميائية، والتفاعلات الكيميائية الأساسية. يتم التركيز على الأحماض والقواعد، والأكسدة والاختزال.</p>
-                </div>
-                <div id="pure-math-content" class="subject-content" style="display: none;">
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة البحتة تركز على الجبر والهندسة التحليلية وحساب التفاضل والتكامل. تتناول المفاهيم الرياضية المجردة وتطبيقاتها النظرية.</p>
-                </div>
-                <div id="applied-math-content" class="subject-content" style="display: none;">
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة التطبيقية تشمل الميكانيكا والإحصاء والاحتمالات. تركز على تطبيق المفاهيم الرياضية لحل المشكلات الواقعية.</p>
-                </div>
-                <div id="history-content" class="subject-content" style="display: none;">
-                    <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">ملخصات مادة التاريخ تغطي الفترات التاريخية الهامة، الأحداث الرئيسية، والشخصيات المؤثرة. تركز على فهم التطورات الحضارية والسياسية.</p>
-                </div>
-            </div>
-        </section>
-
-        <section id="settings" class="">
-            <h1 style="margin-bottom: 2rem;">الإعدادات</h1>
-            <!-- Dark Mode Toggle moved back here -->
-            <div class="settings-item">
-                <span>الوضع الداكن</span>
-                <label class="switch">
-                    <input type="checkbox" id="dark-mode-toggle">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="settings-item" id="install-app-item" style="display: none;">
-                <span>تثبيت التطبيق</span>
-                <button onclick="installApp()" id="install-button-emoji" style="background: none; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                    <span id="install-emoji" style="font-size: 24px; transition: transform 0.3s ease;">📥</span>
-                </button>
-            </div>
-        </section>
-
-        <section id="notifications">
-            <h1>أهلاً في صفحة الإشعارات</h1>
-            <div id="notifications-container" class="notifications-container">
-                <!-- Notifications will be loaded here dynamically -->
-                <div class="loading-indicator">جاري تحميل الإشعارات...</div>
-            </div>
-        </section>
+        <section id="store"><h1>المتجر</h1></section>
+        <section id="summaries"><h1>الملخصات</h1></section>
+        <section id="settings"><h1>الإعدادات</h1></section>
+        <section id="notifications"><h1>الإشعارات</h1></section>
     </main>
 
     <nav class="bottom-nav" style="display: flex;">
         <button onclick="showTab('home')" class="active">
             <div class="icon-container">
-                <!-- SVG Icon for Home -->
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1.58594 10.5453L10.9393 1.43968C11.0786 1.30029 11.244 1.18971 11.426 1.11427C11.6081 1.03883 11.8032 1 12.0003 1C12.1973 1 12.3925 1.03883 12.5745 1.11427C12.7566 1.18971 12.922 1.30029 13.0613 1.43968L22.4146 10.5453"/>
-                    <path d="M16.5 4.62866V3.12866H20V7.84375"/>
-                    <path d="M3 9.5V18.069V21.6552C3 22.0118 3.1724 22.3539 3.47928 22.6061C3.78616 22.8583 4.20237 23 4.63636 23H19.3636C19.7976 23 20.2138 22.8583 20.5207 22.6061C20.8276 22.3539 21 22.0118 21 21.6552V9.5"/>
-                    <path d="M15 23V18C15 16.3431 13.6569 15 12 15V15C10.3431 15 9 16.3431 9 18V23"/>
-                </svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.58594 10.5453L10.9393 1.43968C11.5224 0.856576 12.4781 0.856576 13.0613 1.43968L22.4146 10.5453"/><path d="M16.5 4.62866V3.12866H20V7.84375"/><path d="M3 9.5V21.6552C3 22.0118 3.1724 22.3539 3.47928 22.6061C3.78616 22.8583 4.20237 23 4.63636 23H19.3636C19.7976 23 20.2138 22.8583 20.5207 22.6061C20.8276 22.3539 21 22.0118 21 21.6552V9.5"/><path d="M15 23V18C15 16.3431 13.6569 15 12 15V15C10.3431 15 9 16.3431 9 18V23"/></svg>
             </div>
             <span>الرئيسية</span>
         </button>
         <button onclick="showTab('exams')" class="">
             <div class="icon-container">
-                <!-- SVG Icon for Exams -->
-                <svg width="24" height="24" viewBox="0 0 294.023 294.023" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M124.916,0.002 c-1.649,0.045-3.169,0.9-4.064,2.285l-14.49,21.736h-49.35c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5 V39.574l-10,15v19.449h-40v-40h37.682L85.631,55.117l-6.146-12.293c-1.205-2.485-4.196-3.523-6.681-2.318 c-2.485,1.205-3.523,4.196-2.318,6.681c0.018,0.036,0.035,0.072,0.054,0.108l10,20c1.235,2.47,4.238,3.472,6.709,2.237 c0.778-0.389,1.441-0.974,1.924-1.698l40-60c1.565-2.276,0.989-5.389-1.287-6.954C127.013,0.281,125.974-0.027,124.916,0.002 L124.916,0.002z M147.012,44.025c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5 H147.012z M57.012,94.06c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5v-50c0-2.761-2.239-5-5-5H57.012z M62.012,104.06h40v40h-40V104.06z M147.012,114.023c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10 c0-2.761-2.239-5-5-5H147.012z M57.012,164.023c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5v-50 c0-2.761-2.239-5-5-5H57.012z M62.012,174.023h40v40h-40V174.023z M147.012,184.058c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90 c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5H147.012z M57.012,234.023c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50 c2.761,0,5-2.239,5-5v-50c0-2.761-2.239-5-5-5L57.012,234.023L57.012,234.023z M62.012,244.023h40v40h-40V244.023z M147.012,254.023 c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5H147.012z"/>
-                </svg>
+                <svg width="24" height="24" viewBox="0 0 294.023 294.023" fill="currentColor"><path d="M124.916,0.002 c-1.649,0.045-3.169,0.9-4.064,2.285l-14.49,21.736h-49.35c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5 V39.574l-10,15v19.449h-40v-40h37.682L85.631,55.117l-6.146-12.293c-1.205-2.485-4.196-3.523-6.681-2.318 c-2.485,1.205-3.523,4.196-2.318,6.681c0.018,0.036,0.035,0.072,0.054,0.108l10,20c1.235,2.47,4.238,3.472,6.709,2.237 c0.778-0.389,1.441-0.974,1.924-1.698l40-60c1.565-2.276,0.989-5.389-1.287-6.954C127.013,0.281,125.974-0.027,124.916,0.002 L124.916,0.002z M147.012,44.025c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5 H147.012z M57.012,94.06c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5v-50c0-2.761-2.239-5-5-5H57.012z M62.012,104.06h40v40h-40V104.06z M147.012,114.023c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10 c0-2.761-2.239-5-5-5H147.012z M57.012,164.023c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50c2.761,0,5-2.239,5-5v-50 c0-2.761-2.239-5-5-5H57.012z M62.012,174.023h40v40h-40V174.023z M147.012,184.058c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90 c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5H147.012z M57.012,234.023c-2.761,0-5,2.239-5,5v50c0,2.761,2.239,5,5,5h50 c2.761,0,5-2.239,5-5v-50c0-2.761-2.239-5-5-5L57.012,234.023L57.012,234.023z M62.012,244.023h40v40h-40V244.023z M147.012,254.023 c-2.761,0-5,2.239-5,5v10c0,2.761,2.239,5,5,5h90c2.761,0,5-2.239,5-5v-10c0-2.761-2.239-5-5-5H147.012z"/></svg>
             </div>
             <span>اختبارات</span>
         </button>
         <button onclick="showTab('reviews')" class="">
             <div class="icon-container">
-                <!-- SVG Icon for Reviews/Ratings -->
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 9H21M9 15L11 17L15 13M7 3V5M17 3V5M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9H21M9 15L11 17L15 13M7 3V5M17 3V5M6.2 21H17.8C19.4802 21 21 19.4802 21 17.8V8.2C21 6.51984 19.4802 5 17.8 5H6.2C4.51984 5 3 6.51984 3 8.2V17.8C3 19.4802 4.51984 21 6.2 21Z"/></svg>
             </div>
-            <span>التقييمات محلولة</span>
+            <span>التقييمات</span>
         </button>
     </nav>
 
-    <!-- Custom Message Box -->
     <div id="custom-message-box" class="custom-message-box"></div>
 
-    <script>
-        let deferredPrompt; // To store the beforeinstallprompt event
+    <!-- === START FIREBASE INTEGRATION === -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Function to update the displayed points
-        async function updatePointsDisplay() {
-            const pointsDisplayElement = document.getElementById('points-display');
+        // Your web app's Firebase configuration from the prompt
+        const firebaseConfig = {
+            apiKey: "AIzaSyCzXajGeExTVfcMJ9L3fJjRl9TSu0apRZY",
+            authDomain: "tanya-thanawey.firebaseapp.com",
+            projectId: "tanya-thanawey",
+            storageBucket: "tanya-thanawey.firebasestorage.app",
+            messagingSenderId: "963147710003",
+            appId: "1:963147710003:web:355267be9545ee8f1fad46",
+            measurementId: "G-QJ6TK546YK"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Use a consistent App ID for Firestore paths
+        const appId = "tanya-thanawey";
+
+        // References to Firestore collections
+        const examsCollectionRef = collection(db, `artifacts/${appId}/public/data/exams`);
+        const reviewsCollectionRef = collection(db, `artifacts/${appId}/public/data/reviews`);
+        
+        // Global variables
+        let currentExamData = null;
+        let examTimerInterval = null;
+        let userAnswers = [];
+        let currentUserId = null;
+        let currentPoints = 0;
+        let completedExamsSet = new Set();
+
+        // UI Elements
+        const examsContainer = document.getElementById('exams-container');
+        const reviewsContainer = document.getElementById('reviews-container');
+        const examTakingSection = document.getElementById('exam-taking-section');
+        const examTitleElement = document.getElementById('exam-taking-title');
+        const questionsDisplayContainer = document.getElementById('questions-display-container');
+        const submitExamButton = document.getElementById('submit-exam-button');
+        const examTimerElement = document.getElementById('exam-timer');
+        const backArrow = document.getElementById('back-arrow');
+        const profileContentArea = document.getElementById('profile-content-area');
+        const pointsDisplayElement = document.getElementById('points-display');
+
+        // --- AUTHENTICATION ---
+        onAuthStateChanged(auth, async (user) => {
+            currentUserId = user ? user.uid : null;
+            updateProfileUI(user);
+            if (user) {
+                await saveUserProfile(user);
+                await fetchUserPoints();
+                await fetchCompletedExams();
+            } else {
+                currentPoints = 0;
+                completedExamsSet.clear();
+                updatePointsDisplay();
+                loadExams(); // Reload exams to show all
+            }
+        });
+
+        const updateProfileUI = (user) => {
+            if (!profileContentArea) return;
+            profileContentArea.innerHTML = '';
+            if (user) {
+                const userPhoto = user.photoURL ? `<img src="${user.photoURL}" alt="صورة الملف الشخصي" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 1.5rem; border: 3px solid var(--primary-color);">` : '';
+                profileContentArea.innerHTML = `
+                    ${userPhoto}
+                    <h2 style="color: var(--primary-color); font-size: 1.8rem; margin-bottom: 0.5rem;">أهلاً بك، ${user.displayName || 'مستخدم'}!</h2>
+                    <p style="color: var(--secondary-color); font-size: 0.95rem; margin-bottom: 2rem;">${user.email || ''}</p>
+                    <button onclick="window.signOutUser()" style="padding: 12px 24px; background-color: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer;">تسجيل الخروج</button>
+                `;
+            } else {
+                profileContentArea.innerHTML = `
+                    <p style="color: var(--text-color); font-size: 1.1rem; margin-bottom: 2rem;">سجل الدخول لحفظ تقدمك ونقاطك.</p>
+                    <button onclick="window.signInWithGoogle()" style="padding: 12px 24px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer;">تسجيل الدخول باستخدام جوجل</button>
+                `;
+            }
+        };
+        
+        window.signInWithGoogle = async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error('Error during Google Sign-in:', error);
+            }
+        };
+
+        window.signOutUser = async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error('Error during sign out:', error);
+            }
+        };
+
+        const saveUserProfile = async (user) => {
+            if (!user) return;
+            const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, 'data');
+            const profileData = {
+                uid: user.uid,
+                displayName: user.displayName || null,
+                email: user.email || null,
+                photoURL: user.photoURL || null,
+                lastLogin: serverTimestamp()
+            };
+            await setDoc(userDocRef, profileData, { merge: true });
+        };
+        
+        // --- POINTS SYSTEM ---
+        const fetchUserPoints = async () => {
+            if (!currentUserId) return;
+            const pointsDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/points`, 'data');
+            const docSnap = await getDoc(pointsDocRef);
+            if (docSnap.exists()) {
+                currentPoints = docSnap.data().value || 0;
+            } else {
+                await setDoc(pointsDocRef, { value: 0 });
+                currentPoints = 0;
+            }
+            updatePointsDisplay();
+        };
+
+        const updateUserPoints = async (pointsToAdd) => {
+            if (!currentUserId) return;
+            const newTotalPoints = currentPoints + pointsToAdd;
+            const pointsDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/points`, 'data');
+            await setDoc(pointsDocRef, { value: newTotalPoints }, { merge: true });
+            currentPoints = newTotalPoints;
+            updatePointsDisplay();
+        };
+
+        const updatePointsDisplay = () => {
             if (pointsDisplayElement) {
-                if (window.currentUserId) {
-                    pointsDisplayElement.textContent = `${window.currentPoints} نقاط`;
-                } else {
-                    pointsDisplayElement.textContent = `يجب تسجيل الدخول لتفعيل عداد النقاط`;
-                }
+                pointsDisplayElement.textContent = `${currentPoints} نقاط`;
             }
-        }
+        };
 
-        // New function to handle click on points display
-        function handlePointsDisplayClick() {
-            if (window.currentUserId) {
-                showTab('store'); // Go to store if logged in
-            } else {
-                showTab('profile'); // Go to profile if not logged in
-            }
-        }
-
-        // Function to simulate adding points and update in Firestore
-        async function addPoints(amount) {
-            if (!window.currentUserId) {
-                console.warn('Cannot add points: User not logged in.');
-                showMessageBox('الرجاء تسجيل الدخول لإضافة نقاط!', 'error');
-                return;
-            }
-            const newTotalPoints = window.currentPoints + amount;
-            await window.updatePoints(newTotalPoints);
-            console.log(`Added ${amount} points. Total points: ${newTotalPoints}`);
-        }
-
-        // Function to show main tabs
-        function showTab(id) {
-            // Scroll the window to the top to ensure the new page starts from the beginning
-            window.scrollTo(0, 0);
-
-            document.querySelectorAll('section').forEach(sec => {
-                sec.classList.remove('active');
-            });
-            document.getElementById(id).classList.add('active');
-
+        // --- UI & Navigation ---
+        window.showTab = (id) => {
+            document.querySelectorAll('main > section').forEach(sec => sec.classList.remove('active'));
+            const sectionToShow = document.getElementById(id);
+            if(sectionToShow) sectionToShow.classList.add('active');
             document.querySelectorAll('.bottom-nav button').forEach(btn => {
-                btn.classList.remove('active');
+                btn.classList.toggle('active', btn.getAttribute('onclick') === `showTab('${id}')`);
             });
+            const isChildPage = !['home', 'exams', 'reviews'].includes(id);
+            document.querySelector('.bottom-nav').style.display = isChildPage ? 'none' : 'flex';
+            backArrow.style.display = isChildPage ? 'block' : 'none';
+            examTimerElement.style.display = id === 'exam-taking-section' ? 'flex' : 'none';
+        };
 
-            const navButton = document.querySelector(`.bottom-nav button[onclick="showTab('${id}')"]`);
-            if (navButton) {
-                navButton.classList.add('active');
-            }
-
-            const navBar = document.querySelector('.bottom-nav');
-            const backArrow = document.getElementById('back-arrow');
-            const pointsDisplay = document.getElementById('points-display');
-            const moreMenuContainer = document.querySelector('.more-menu-container');
-            const examTimerElement = document.getElementById('exam-timer');
-
-            const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
-
-            // Reset display styles for header elements
-            backArrow.style.display = 'none';
-            pointsDisplay.style.display = 'flex';
-            examTimerElement.style.display = 'none';
-
-            // MODIFIED: Show "More" menu only on the home page
-            if (id === 'home') {
-                moreMenuContainer.style.display = 'block';
-            } else {
-                moreMenuContainer.style.display = 'none';
-            }
-
-            // Apply specific styles based on the active tab
-            if (isChildPage) {
-                navBar.style.display = 'none';
-                backArrow.style.display = 'block';
-
-                if (id === 'exam-taking-section') {
-                    pointsDisplay.style.display = 'none';
-                    examTimerElement.style.display = 'flex';
-                }
-            } else {
-                navBar.style.display = 'flex';
-            }
-
-            // If navigating to summaries, ensure the first subject tab is active
-            if (id === 'summaries') {
-                showSubjectContent('arabic'); // Set 'اللغة العربية' as default active subject tab
-            } else if (id === 'profile') {
-                // When navigating to profile, ensure UI is updated based on current auth state
-                if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-                    updateProfileUI(window.firebaseAuth.currentUser);
-                } else {
-                    updateProfileUI(null);
-                }
-            } else if (id === 'exams') {
-                // When navigating back to exams, clear exam-taking section content
-                const questionsDisplayContainer = document.getElementById('questions-display-container');
-                const submitExamButton = document.getElementById('submit-exam-button');
-                const examTimerElement = document.getElementById('exam-timer');
-                const examTitleElement = document.getElementById('exam-taking-title');
-
-                questionsDisplayContainer.innerHTML = '';
-                submitExamButton.style.display = 'none';
-                examTimerElement.textContent = '';
-                examTitleElement.textContent = '';
-                questionsDisplayContainer.style.display = 'block';
-            } else if (id === 'notifications') {
-                loadNotifications();
-            }
-        }
-
-        // Function to toggle the more menu dropdown
-        function toggleMoreMenu() {
-            const dropdown = document.getElementById('more-menu-dropdown');
-            dropdown.classList.toggle('active');
-        }
-
-        // Function to show content for a specific subject tab
-        function showSubjectContent(subjectId) {
-            // Deactivate all subject tabs
-            document.querySelectorAll('.subject-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Activate the clicked subject tab
-            const activeTab = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
-            if (activeTab) {
-                activeTab.classList.add('active');
-            }
-
-            // Hide all subject content divs
-            document.querySelectorAll('.subject-content').forEach(contentDiv => {
-                contentDiv.style.display = 'none';
-            });
-
-            // Show the content div for the active subject
-            const contentToShow = document.getElementById(`${subjectId}-content`);
-            if (contentToShow) {
-                contentToShow.style.display = 'block';
-            }
-        }
-
-        // PWA Installation Logic
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent the mini-infobar from appearing on mobile
-            e.preventDefault();
-            // Stash the event so it can be triggered later.
-            deferredPrompt = e;
-            // Update UI to notify the user they can add to home screen
-            const installAppItem = document.getElementById('install-app-item');
-            if (installAppItem) {
-                installAppItem.style.display = 'flex'; // Show the install option
-            }
-            console.log('beforeinstallprompt event fired.');
-        });
-
-        async function installApp() {
-            const installEmojiSpan = document.getElementById('install-emoji');
-            if (installEmojiSpan) {
-                installEmojiSpan.textContent = '🔄'; // Spinner emoji
-                installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
-
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                        console.log('User accepted the A2HS prompt');
-                        installEmojiSpan.textContent = '✅'; // Checkmark
-                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
-                        const installAppItem = document.getElementById('install-app-item');
-                        if (installAppItem) {
-                            installAppItem.style.display = 'none'; // Hide the button
-                        }
-                    } else {
-                        console.log('User dismissed the A2HS prompt');
-                        installEmojiSpan.textContent = '📥'; // Revert to download emoji
-                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
-                    }
-                    deferredPrompt = null; // Clear the deferredPrompt
-                } else {
-                    // PWA not available or already installed/dismissed
-                    console.log('PWA installation prompt not available or already shown.');
-                    installEmojiSpan.textContent = '❌'; // Indicate failure or not available
-                    // If it's not available, it should probably be hidden
-                    const installAppItem = document.getElementById('install-app-item');
-                    if (installAppItem) {
-                        installAppItem.style.display = 'none';
-                    }
-                }
-            }
-        }
-
-        window.addEventListener('appinstalled', () => {
-            // App was installed
-            console.log('PWA was installed');
-            // Hide the install button if the app is already installed
-            const installAppItem = document.getElementById('install-app-item');
-            if (installAppItem) {
-                installAppItem.style.display = 'none';
-            }
-        });
-
-
-        // Register Service Worker (for PWA functionality)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(registration => {
-                        console.log('Service Worker registered: ', registration);
-                    })
-                    .catch(registrationError => {
-                        console.log('Service Worker registration failed: ', registrationError);
-                    });
-            });
-        }
-
-
-        // Event listeners for header bar
-        document.getElementById('more-menu-icon').addEventListener('click', (event) => {
-            event.stopPropagation();
-            toggleMoreMenu();
-        });
-
-        document.addEventListener('click', (event) => {
-            const dropdown = document.getElementById('more-menu-dropdown');
-            const moreMenuIcon = document.getElementById('more-menu-icon');
-            if (!dropdown.contains(event.target) && !moreMenuIcon.contains(event.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
-
-        document.getElementById('back-arrow').addEventListener('click', () => {
-            // If currently in exam-taking section, go back to exams list
-            if (document.getElementById('exam-taking-section').classList.contains('active')) {
+        backArrow.addEventListener('click', () => {
+            if (examTakingSection.classList.contains('active')) {
                 showTab('exams');
             } else {
                 showTab('home');
             }
         });
+        
+        window.toggleMoreMenu = () => document.getElementById('more-menu-dropdown').classList.toggle('active');
 
-        // Swipe functionality for subject content area
-        let startX = 0;
-        let endX = 0;
-        const swipeThreshold = 50; // Minimum pixels to count as a swipe
+        // --- Data Loading ---
+        const fetchCompletedExams = async () => {
+             if (!currentUserId) return;
+             const completedExamsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/completedExams`);
+             onSnapshot(completedExamsRef, (snapshot) => {
+                 completedExamsSet.clear();
+                 snapshot.forEach(doc => completedExamsSet.add(doc.id));
+                 loadExams(); // Refresh exam list after fetching completed ones
+             });
+        }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            showTab('home'); // Show home tab by default
-
-            const darkModeToggle = document.getElementById('dark-mode-toggle');
-            const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
-
-            if (isDarkMode) {
-                document.body.classList.add('dark-mode');
-                if (darkModeToggle) {
-                    darkModeToggle.checked = true;
+        const loadExams = () => {
+            const q = query(examsCollectionRef, orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                examsContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    examsContainer.innerHTML = '<p class="loading-indicator">لا توجد اختبارات متاحة حاليًا.</p>';
+                    return;
                 }
-            }
-
-            if (darkModeToggle) {
-                darkModeToggle.addEventListener('change', () => {
-                    if (darkModeToggle.checked) {
-                        document.body.classList.add('dark-mode');
-                        localStorage.setItem('darkMode', 'enabled');
-                    } else {
-                        document.body.classList.remove('dark-mode');
-                        localStorage.setItem('darkMode', 'disabled');
+                snapshot.docs.forEach((doc) => {
+                    // Only show exams that are not completed by the user
+                    if (!completedExamsSet.has(doc.id)) {
+                        const exam = doc.data();
+                        const card = document.createElement('div');
+                        card.className = 'item-card';
+                        card.innerHTML = `
+                            <h3 class="item-card-title">${exam.name}</h3>
+                            <p class="item-card-info">المدة: ${exam.duration} دقيقة</p>
+                            <p class="item-card-info">عدد الأسئلة: ${exam.numQuestions}</p>
+                            <button class="start-button" data-exam-id="${doc.id}">ابدأ الاختبار</button>
+                        `;
+                        examsContainer.appendChild(card);
                     }
                 });
+                if (examsContainer.children.length === 0) {
+                     examsContainer.innerHTML = '<p class="loading-indicator">لقد أكملت جميع الاختبارات المتاحة!</p>';
+                }
+            });
+        };
+
+        const loadReviews = () => {
+            const q = query(reviewsCollectionRef, orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                reviewsContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    reviewsContainer.innerHTML = '<p class="loading-indicator">لا توجد تقييمات متاحة حاليًا.</p>';
+                    return;
+                }
+                snapshot.forEach((doc) => {
+                    const review = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'item-card';
+                    card.innerHTML = `
+                        <h3 class="item-card-title">${review.text}</h3>
+                        <button class="start-button">افتح الرابط</button>
+                    `;
+                    card.querySelector('.start-button').addEventListener('click', () => window.open(review.link, '_blank'));
+                    reviewsContainer.appendChild(card);
+                });
+            });
+        };
+
+        // --- Exam Logic ---
+        const startExam = async (examId) => {
+            if (!currentUserId) {
+                alert("الرجاء تسجيل الدخول أولاً لبدء الاختبار.");
+                showTab('profile');
+                return;
             }
+            showTab('exam-taking-section');
+            examTitleElement.textContent = 'جاري تحميل الامتحان...';
+            questionsDisplayContainer.innerHTML = '<div class="loading-indicator">جاري تحميل الأسئلة...</div>';
+            submitExamButton.style.display = 'none';
 
-            const subjectContentArea = document.getElementById('subject-content-area');
-            if (subjectContentArea) {
-                subjectContentArea.addEventListener('touchstart', (e) => {
-                    startX = e.touches[0].clientX;
-                });
+            const examDocRef = doc(examsCollectionRef, examId);
+            const docSnap = await getDoc(examDocRef);
 
-                subjectContentArea.addEventListener('touchmove', (e) => {
-                    endX = e.touches[0].clientX;
-                });
-
-                subjectContentArea.addEventListener('touchend', () => {
-                    const diffX = startX - endX;
-
-                    // Get all subject content IDs
-                    const subjectContents = Array.from(document.querySelectorAll('.subject-content'));
-                    const subjectIds = subjectContents.map(content => content.id.replace('-content', ''));
-
-                    // Get the currently active subject ID
-                    const activeSubjectContent = document.querySelector('.subject-content.active');
-                    if (!activeSubjectContent) return;
-                    const currentSubjectId = activeSubjectContent.id.replace('-content', '');
-                    const currentIndex = subjectIds.indexOf(currentSubjectId);
-
-                    if (Math.abs(diffX) > swipeThreshold) {
-                        if (diffX > 0) { // Swiped left (move to next subject in RTL)
-                            const nextIndex = (currentIndex + 1) % subjectIds.length;
-                            showSubjectContent(subjectIds[nextIndex]);
-                        } else { // Swiped right (move to previous subject in RTL)
-                            const prevIndex = (currentIndex - 1 + subjectIds.length) % subjectIds.length;
-                            showSubjectContent(subjectIds[prevIndex]);
-                        }
-                    }
-                    // Reset touch coordinates
-                    startX = 0;
-                    endX = 0;
-                });
+            if (docSnap.exists()) {
+                currentExamData = { id: docSnap.id, ...docSnap.data() };
+                examTitleElement.textContent = `اختبار: ${currentExamData.name}`;
+                renderExamQuestions(currentExamData.questions);
+                startTimer(currentExamData.duration);
+                submitExamButton.style.display = 'block';
+            } else {
+                examTitleElement.textContent = 'الامتحان غير موجود.';
+            }
+        };
+        
+        const renderExamQuestions = (questions) => {
+            questionsDisplayContainer.innerHTML = '';
+            userAnswers = new Array(questions.length).fill(null);
+            questions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'exam-question-card';
+                questionDiv.innerHTML = `
+                    <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
+                    <div class="options-container">
+                        ${q.options.map((option, optIndex) => `
+                            <label class="option-label">
+                                <input type="radio" name="question-${qIndex}" value="${optIndex}" class="option-radio">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>`;
+                questionsDisplayContainer.appendChild(questionDiv);
+            });
+        };
+        
+        questionsDisplayContainer.addEventListener('change', e => {
+            if(e.target.type === 'radio') {
+                const qIndex = parseInt(e.target.name.split('-')[1]);
+                userAnswers[qIndex] = parseInt(e.target.value);
             }
         });
+
+        const startTimer = (durationMinutes) => {
+            let remainingTime = durationMinutes * 60;
+            if (examTimerInterval) clearInterval(examTimerInterval);
+            examTimerInterval = setInterval(() => {
+                if (remainingTime <= 0) {
+                    clearInterval(examTimerInterval);
+                    examTimerElement.textContent = 'انتهى الوقت!';
+                    submitExam();
+                    return;
+                }
+                remainingTime--;
+                const minutes = Math.floor(remainingTime / 60);
+                const seconds = remainingTime % 60;
+                examTimerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                if(remainingTime < 60) examTimerElement.classList.add('timer-warning');
+            }, 1000);
+        };
+
+        const submitExam = async () => {
+            if (examTimerInterval) clearInterval(examTimerInterval);
+            
+            let correctAnswersCount = 0;
+            let pointsEarned = 0;
+            currentExamData.questions.forEach((q, qIndex) => {
+                if (userAnswers[qIndex] === q.correctOptionIndex) {
+                    correctAnswersCount++;
+                    pointsEarned += (q.points || 10); // Add points for correct answer
+                }
+            });
+
+            if (currentUserId) {
+                await updateUserPoints(pointsEarned);
+                // Mark exam as completed
+                const completedExamDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/completedExams`, currentExamData.id);
+                await setDoc(completedExamDocRef, { completedAt: serverTimestamp(), score: correctAnswersCount });
+            }
+            
+            displayExamResults(correctAnswersCount, pointsEarned);
+            submitExamButton.style.display = 'none';
+        };
+        
+        const displayExamResults = (score, points) => {
+            const totalQuestions = currentExamData.questions.length;
+            const percentageScore = (totalQuestions > 0) ? ((score / totalQuestions) * 100).toFixed(1) : 0;
+
+            questionsDisplayContainer.innerHTML = `
+                <div class="exam-summary-floating">
+                    <h2>نتيجتك:</h2>
+                    <p>أجبت على ${score} سؤال صحيح من أصل ${totalQuestions}.</p>
+                    <p>النسبة المئوية: ${percentageScore}%</p>
+                    <p>النقاط المكتسبة: ${points} نقطة</p>
+                </div>
+                <div class="exam-review-container"><h3>مراجعة الامتحان:</h3></div>
+                <button class="back-to-exams-button" onclick="showTab('exams')">العودة للاختبارات</button>
+            `;
+            
+            const reviewContainer = questionsDisplayContainer.querySelector('.exam-review-container');
+            currentExamData.questions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'exam-question-card review-mode';
+                questionDiv.innerHTML = `
+                    <p class="question-text"><strong>السؤال ${qIndex + 1}:</strong> ${q.questionText}</p>
+                    <div class="options-container">
+                        ${q.options.map((option, optIndex) => {
+                            let labelClass = 'option-label';
+                            if (optIndex === q.correctOptionIndex) labelClass += ' correct-answer';
+                            if (userAnswers[qIndex] === optIndex && optIndex !== q.correctOptionIndex) labelClass += ' user-incorrect-answer';
+                            return `<label class="${labelClass}"><input type="radio" name="review-q-${qIndex}" ${userAnswers[qIndex] === optIndex ? 'checked' : ''} disabled><span>${option}</span></label>`;
+                        }).join('')}
+                    </div>`;
+                reviewContainer.appendChild(questionDiv);
+            });
+        };
+
+        // --- Event Delegation ---
+        document.getElementById('exams-container').addEventListener('click', (e) => {
+            if (e.target.matches('.start-button')) {
+                const examId = e.target.dataset.examId;
+                startExam(examId);
+            }
+        });
+
+        // --- Initial Load ---
+        showTab('home');
+        loadExams();
+        loadReviews();
+
     </script>
 </body>
 </html>
