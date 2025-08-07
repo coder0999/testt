@@ -1978,318 +1978,180 @@
     <!-- Custom Message Box -->
     <div id="custom-message-box" class="custom-message-box"></div>
 
-    <script>
-        let deferredPrompt; // To store the beforeinstallprompt event
+   <script type="module">
+    // ... (Your existing imports and code) ...
+    // Make sure your imports include the necessary Firestore functions
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-        // Function to update the displayed points
-        async function updatePointsDisplay() {
-            const pointsDisplayElement = document.getElementById('points-display');
-            if (pointsDisplayElement) {
-                if (window.currentUserId) {
-                    pointsDisplayElement.textContent = `${window.currentPoints} نقاط`;
-                } else {
-                    pointsDisplayElement.textContent = `يجب تسجيل الدخول لتفعيل عداد النقاط`;
-                }
-            }
-        }
+    // ... (Your existing Firebase config and initialization) ...
+    const effectiveFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
+    const app = initializeApp(effectiveFirebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-        // New function to handle click on points display
-        function handlePointsDisplayClick() {
-            if (window.currentUserId) {
-                showTab('store'); // Go to store if logged in
+    // Global variables
+    let currentUserId = null;
+    let isAuthReady = false;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : effectiveFirebaseConfig.projectId;
+
+    // Initial authentication check
+    async function authenticateAndSetup() {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
             } else {
-                showTab('profile'); // Go to profile if not logged in
+                await signInAnonymously(auth);
             }
+            currentUserId = auth.currentUser.uid;
+            isAuthReady = true;
+            console.log("Admin panel authenticated. User ID:", currentUserId);
+            // After successful auth, load the published exams
+            loadPublishedExams();
+        } catch (e) {
+            console.error("Error during authentication:", e);
+        }
+    }
+    authenticateAndSetup();
+
+    // ... (Your other functions like showMessage, showSection, etc.) ...
+    
+    // Function to add a published exam to Firestore
+    async function addPublishedExam(examData) {
+        if (!isAuthReady) {
+            showMessage('فشل: لم يتم ربط قاعدة البيانات.', false);
+            return;
+        }
+        try {
+            // Path: /artifacts/{appId}/public/data/exams
+            // This collection will be public and accessible by all users
+            const examsCollectionRef = collection(db, `artifacts/${appId}/public/data/exams`);
+            await addDoc(examsCollectionRef, examData);
+            showMessage('تم نشر الاختبار بنجاح.', true);
+            console.log("Exam published to Firestore:", examData);
+            return true;
+        } catch (e) {
+            showMessage('فشل: خطأ في حفظ الاختبار في قاعدة البيانات.', false);
+            console.error("Error publishing exam to Firestore:", e);
+            return false;
+        }
+    }
+
+    // This is the updated code for the publish button logic.
+    // You should replace the existing logic for the "نشر الاختبار" button with this code.
+    const publishExamButton = document.getElementById('publish-exam-button');
+    const examTitleInput = document.getElementById('exam-title-input');
+    const questionsContainer = document.getElementById('questions-container');
+
+    publishExamButton.addEventListener('click', async () => {
+        const examTitle = examTitleInput.value.trim();
+        if (!examTitle) {
+            showMessage('الرجاء إدخال عنوان الاختبار.', false);
+            return;
         }
 
-        // Function to simulate adding points and update in Firestore
-        async function addPoints(amount) {
-            if (!window.currentUserId) {
-                console.warn('Cannot add points: User not logged in.');
-                showMessageBox('الرجاء تسجيل الدخول لإضافة نقاط!', 'error');
-                return;
-            }
-            const newTotalPoints = window.currentPoints + amount;
-            await window.updatePoints(newTotalPoints);
-            console.log(`Added ${amount} points. Total points: ${newTotalPoints}`);
-        }
-
-        // Function to show main tabs
-        function showTab(id) {
-            // Scroll the window to the top to ensure the new page starts from the beginning
-            window.scrollTo(0, 0);
-
-            document.querySelectorAll('section').forEach(sec => {
-                sec.classList.remove('active');
+        const questions = [];
+        const questionBlocks = questionsContainer.querySelectorAll('.question-block');
+        questionBlocks.forEach(block => {
+            const questionText = block.querySelector('.question-input').value.trim();
+            const questionPoints = parseInt(block.querySelector('input[type="number"]').value, 10);
+            const answerOptions = Array.from(block.querySelectorAll('.answer-option')).map(option => {
+                return {
+                    text: option.querySelector('.answer-input').value.trim(),
+                    isCorrect: option.querySelector('.correct-answer-radio').checked
+                };
             });
-            document.getElementById(id).classList.add('active');
+            const correctAnswer = answerOptions.find(option => option.isCorrect);
 
-            document.querySelectorAll('.bottom-nav button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            const navButton = document.querySelector(`.bottom-nav button[onclick="showTab('${id}')"]`);
-            if (navButton) {
-                navButton.classList.add('active');
-            }
-
-            const navBar = document.querySelector('.bottom-nav');
-            const backArrow = document.getElementById('back-arrow');
-            const pointsDisplay = document.getElementById('points-display');
-            const moreMenuContainer = document.querySelector('.more-menu-container');
-            const examTimerElement = document.getElementById('exam-timer');
-
-            const isChildPage = ['profile', 'settings', 'notifications', 'store', 'summaries', 'exam-taking-section'].includes(id);
-
-            // Reset display styles for header elements
-            backArrow.style.display = 'none';
-            pointsDisplay.style.display = 'flex';
-            examTimerElement.style.display = 'none';
-
-            // MODIFIED: Show "More" menu only on the home page
-            if (id === 'home') {
-                moreMenuContainer.style.display = 'block';
-            } else {
-                moreMenuContainer.style.display = 'none';
-            }
-
-            // Apply specific styles based on the active tab
-            if (isChildPage) {
-                navBar.style.display = 'none';
-                backArrow.style.display = 'block';
-
-                if (id === 'exam-taking-section') {
-                    pointsDisplay.style.display = 'none';
-                    examTimerElement.style.display = 'flex';
-                }
-            } else {
-                navBar.style.display = 'flex';
-            }
-
-            // If navigating to summaries, ensure the first subject tab is active
-            if (id === 'summaries') {
-                showSubjectContent('arabic'); // Set 'اللغة العربية' as default active subject tab
-            } else if (id === 'profile') {
-                // When navigating to profile, ensure UI is updated based on current auth state
-                if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-                    updateProfileUI(window.firebaseAuth.currentUser);
-                } else {
-                    updateProfileUI(null);
-                }
-            } else if (id === 'exams') {
-                // When navigating back to exams, clear exam-taking section content
-                const questionsDisplayContainer = document.getElementById('questions-display-container');
-                const submitExamButton = document.getElementById('submit-exam-button');
-                const examTimerElement = document.getElementById('exam-timer');
-                const examTitleElement = document.getElementById('exam-taking-title');
-
-                questionsDisplayContainer.innerHTML = '';
-                submitExamButton.style.display = 'none';
-                examTimerElement.textContent = '';
-                examTitleElement.textContent = '';
-                questionsDisplayContainer.style.display = 'block';
-            } else if (id === 'notifications') {
-                loadNotifications();
-            }
-        }
-
-        // Function to toggle the more menu dropdown
-        function toggleMoreMenu() {
-            const dropdown = document.getElementById('more-menu-dropdown');
-            dropdown.classList.toggle('active');
-        }
-
-        // Function to show content for a specific subject tab
-        function showSubjectContent(subjectId) {
-            // Deactivate all subject tabs
-            document.querySelectorAll('.subject-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Activate the clicked subject tab
-            const activeTab = document.querySelector(`.subject-tab[onclick="showSubjectContent('${subjectId}')"]`);
-            if (activeTab) {
-                activeTab.classList.add('active');
-            }
-
-            // Hide all subject content divs
-            document.querySelectorAll('.subject-content').forEach(contentDiv => {
-                contentDiv.style.display = 'none';
-            });
-
-            // Show the content div for the active subject
-            const contentToShow = document.getElementById(`${subjectId}-content`);
-            if (contentToShow) {
-                contentToShow.style.display = 'block';
-            }
-        }
-
-        // PWA Installation Logic
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent the mini-infobar from appearing on mobile
-            e.preventDefault();
-            // Stash the event so it can be triggered later.
-            deferredPrompt = e;
-            // Update UI to notify the user they can add to home screen
-            const installAppItem = document.getElementById('install-app-item');
-            if (installAppItem) {
-                installAppItem.style.display = 'flex'; // Show the install option
-            }
-            console.log('beforeinstallprompt event fired.');
-        });
-
-        async function installApp() {
-            const installEmojiSpan = document.getElementById('install-emoji');
-            if (installEmojiSpan) {
-                installEmojiSpan.textContent = '🔄'; // Spinner emoji
-                installEmojiSpan.classList.add('animate-spin-infinite'); // Start spinning
-
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                        console.log('User accepted the A2HS prompt');
-                        installEmojiSpan.textContent = '✅'; // Checkmark
-                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
-                        const installAppItem = document.getElementById('install-app-item');
-                        if (installAppItem) {
-                            installAppItem.style.display = 'none'; // Hide the button
-                        }
-                    } else {
-                        console.log('User dismissed the A2HS prompt');
-                        installEmojiSpan.textContent = '📥'; // Revert to download emoji
-                        installEmojiSpan.classList.remove('animate-spin-infinite'); // Stop animation
-                    }
-                    deferredPrompt = null; // Clear the deferredPrompt
-                } else {
-                    // PWA not available or already installed/dismissed
-                    console.log('PWA installation prompt not available or already shown.');
-                    installEmojiSpan.textContent = '❌'; // Indicate failure or not available
-                    // If it's not available, it should probably be hidden
-                    const installAppItem = document.getElementById('install-app-item');
-                    if (installAppItem) {
-                        installAppItem.style.display = 'none';
-                    }
-                }
-            }
-        }
-
-        window.addEventListener('appinstalled', () => {
-            // App was installed
-            console.log('PWA was installed');
-            // Hide the install button if the app is already installed
-            const installAppItem = document.getElementById('install-app-item');
-            if (installAppItem) {
-                installAppItem.style.display = 'none';
-            }
-        });
-
-
-        // Register Service Worker (for PWA functionality)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(registration => {
-                        console.log('Service Worker registered: ', registration);
-                    })
-                    .catch(registrationError => {
-                        console.log('Service Worker registration failed: ', registrationError);
-                    });
-            });
-        }
-
-
-        // Event listeners for header bar
-        document.getElementById('more-menu-icon').addEventListener('click', (event) => {
-            event.stopPropagation();
-            toggleMoreMenu();
-        });
-
-        document.addEventListener('click', (event) => {
-            const dropdown = document.getElementById('more-menu-dropdown');
-            const moreMenuIcon = document.getElementById('more-menu-icon');
-            if (!dropdown.contains(event.target) && !moreMenuIcon.contains(event.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
-
-        document.getElementById('back-arrow').addEventListener('click', () => {
-            // If currently in exam-taking section, go back to exams list
-            if (document.getElementById('exam-taking-section').classList.contains('active')) {
-                showTab('exams');
-            } else {
-                showTab('home');
-            }
-        });
-
-        // Swipe functionality for subject content area
-        let startX = 0;
-        let endX = 0;
-        const swipeThreshold = 50; // Minimum pixels to count as a swipe
-
-        document.addEventListener('DOMContentLoaded', () => {
-            showTab('home'); // Show home tab by default
-
-            const darkModeToggle = document.getElementById('dark-mode-toggle');
-            const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
-
-            if (isDarkMode) {
-                document.body.classList.add('dark-mode');
-                if (darkModeToggle) {
-                    darkModeToggle.checked = true;
-                }
-            }
-
-            if (darkModeToggle) {
-                darkModeToggle.addEventListener('change', () => {
-                    if (darkModeToggle.checked) {
-                        document.body.classList.add('dark-mode');
-                        localStorage.setItem('darkMode', 'enabled');
-                    } else {
-                        document.body.classList.remove('dark-mode');
-                        localStorage.setItem('darkMode', 'disabled');
-                    }
-                });
-            }
-
-            const subjectContentArea = document.getElementById('subject-content-area');
-            if (subjectContentArea) {
-                subjectContentArea.addEventListener('touchstart', (e) => {
-                    startX = e.touches[0].clientX;
-                });
-
-                subjectContentArea.addEventListener('touchmove', (e) => {
-                    endX = e.touches[0].clientX;
-                });
-
-                subjectContentArea.addEventListener('touchend', () => {
-                    const diffX = startX - endX;
-
-                    // Get all subject content IDs
-                    const subjectContents = Array.from(document.querySelectorAll('.subject-content'));
-                    const subjectIds = subjectContents.map(content => content.id.replace('-content', ''));
-
-                    // Get the currently active subject ID
-                    const activeSubjectContent = document.querySelector('.subject-content.active');
-                    if (!activeSubjectContent) return;
-                    const currentSubjectId = activeSubjectContent.id.replace('-content', '');
-                    const currentIndex = subjectIds.indexOf(currentSubjectId);
-
-                    if (Math.abs(diffX) > swipeThreshold) {
-                        if (diffX > 0) { // Swiped left (move to next subject in RTL)
-                            const nextIndex = (currentIndex + 1) % subjectIds.length;
-                            showSubjectContent(subjectIds[nextIndex]);
-                        } else { // Swiped right (move to previous subject in RTL)
-                            const prevIndex = (currentIndex - 1 + subjectIds.length) % subjectIds.length;
-                            showSubjectContent(subjectIds[prevIndex]);
-                        }
-                    }
-                    // Reset touch coordinates
-                    startX = 0;
-                    endX = 0;
+            if (questionText && correctAnswer) {
+                questions.push({
+                    text: questionText,
+                    points: questionPoints,
+                    options: answerOptions,
+                    correctAnswerText: correctAnswer.text // Storing correct answer text for easy review
                 });
             }
         });
-    </script>
+
+        if (questions.length === 0) {
+            showMessage('الرجاء إضافة أسئلة للاختبار.', false);
+            return;
+        }
+
+        const examData = {
+            title: examTitle,
+            questions: questions,
+            createdAt: new Date().toISOString()
+        };
+
+        const success = await addPublishedExam(examData);
+        if (success) {
+            // Optional: Clear the form after successful publication
+            examTitleInput.value = '';
+            questionsContainer.innerHTML = '';
+            addQuestionBlock(); // Add an empty question block to start over
+            // Now we can update the list of published exams on the admin page from the database
+            loadPublishedExams(); // Call a new function to fetch and display published exams
+        }
+    });
+
+    // ... (Other existing code) ...
+
+    // New function to load and display published exams from Firestore
+    async function loadPublishedExams() {
+        if (!isAuthReady) {
+            console.warn("Cannot load published exams: Database not ready.");
+            return;
+        }
+
+        const publishedExamsList = document.getElementById('published-exams-list');
+        publishedExamsList.innerHTML = ''; // Clear the list
+
+        try {
+            // Path: /artifacts/{appId}/public/data/exams
+            const examsCollectionRef = collection(db, `artifacts/${appId}/public/data/exams`);
+            const querySnapshot = await getDocs(examsCollectionRef);
+
+            if (querySnapshot.empty) {
+                publishedExamsList.innerHTML = '<p class="text-gray-500">لا توجد اختبارات منشورة بعد.</p>';
+            } else {
+                querySnapshot.forEach(doc => {
+                    const exam = doc.data();
+                    const examId = doc.id;
+                    const examElement = document.createElement('div');
+                    examElement.className = 'published-item';
+                    examElement.innerHTML = `
+                        <span>${exam.title}</span>
+                        <div class="flex items-center space-x-2 space-x-reverse">
+                            <button onclick="removeExam('${examId}')" class="remove-button button-danger button-small"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    `;
+                    publishedExamsList.appendChild(examElement);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading published exams:", e);
+            publishedExamsList.innerHTML = '<p class="text-red-500">حدث خطأ أثناء تحميل الاختبارات.</p>';
+        }
+    }
+
+    // New function to remove an exam from Firestore
+    window.removeExam = async (examId) => {
+        if (!isAuthReady) {
+            showMessage('فشل: لم يتم ربط قاعدة البيانات.', false);
+            return;
+        }
+        try {
+            const examDocRef = doc(db, `artifacts/${appId}/public/data/exams`, examId);
+            await deleteDoc(examDocRef);
+            showMessage('تم حذف الاختبار بنجاح.', true);
+            loadPublishedExams(); // Reload the list
+        } catch (e) {
+            showMessage('فشل: خطأ في حذف الاختبار.', false);
+            console.error("Error removing exam:", e);
+        }
+    };
+</script> 
 </body>
 </html>
