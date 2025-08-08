@@ -244,10 +244,7 @@
         
         // مستمعو أحداث التنقل
         navHomeBtn.addEventListener('click', () => showPage('home-page'));
-        navExamsBtn.addEventListener('click', () => {
-            loadExams();
-            showPage('exams-page');
-        });
+        navExamsBtn.addEventListener('click', () => showPage('exams-page'));
         navEvaluationsBtn.addEventListener('click', () => showPage('evaluations-page'));
         backToExamsBtn.addEventListener('click', () => {
             // إعادة تعيين الصفحة قبل العودة
@@ -264,11 +261,6 @@
             noExamsMessage.classList.add('hidden');
 
             try {
-                if (!userId) {
-                    showCustomAlert('الرجاء الانتظار حتى يتم تحميل البيانات.');
-                    return;
-                }
-
                 // تحميل الامتحانات من المجلد العام
                 const publicExamsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
                 const querySnapshot = await getDocs(publicExamsCollection);
@@ -416,12 +408,12 @@
                 console.log("تم تسجيل الدخول كمستخدم مجهول بنجاح:", userId);
                 // قم بتحميل الامتحانات بمجرد تسجيل الدخول المجهول
                 showPage('home-page');
+                loadExams(); // <--- إضافة هذا السطر لحل مشكلة التحميل
             } else {
                 console.log("فشل تسجيل الدخول كمستخدم مجهول.");
                 // يمكن عرض رسالة خطأ أو محاولة تسجيل الدخول مرة أخرى
             }
         });
-
         // محاولة تسجيل الدخول كمستخدم مجهول عند تحميل الصفحة
         window.onload = async () => {
             try {
@@ -433,7 +425,6 @@
 
         // ربط زر الامتحانات بوظيفة التحميل
         navExamsBtn.addEventListener('click', () => {
-            loadExams();
             showPage('exams-page');
         });
     </script>
