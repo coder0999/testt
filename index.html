@@ -267,8 +267,9 @@
             noExamsMessage.classList.add('hidden');
 
             try {
-                // تحميل الامتحانات من المجلد العام
+                // تحميل الامتحانات من المجلد العام في Firestore
                 const publicExamsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
+                console.log("جارٍ محاولة قراءة الامتحانات من المسار:", `artifacts/${appId}/public/data/exams`);
                 const querySnapshot = await getDocs(publicExamsCollection);
 
                 if (querySnapshot.empty) {
