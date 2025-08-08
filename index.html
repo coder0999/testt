@@ -138,7 +138,7 @@
     <script type="module">
         // استيراد وظائف Firebase اللازمة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, query, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // تهيئة Firebase باستخدام التكوين الخاص بك
@@ -233,15 +233,14 @@
         
         // دالة لتحميل وعرض الامتحانات المتاحة
         async function loadExams() {
-            if (!userId) return; // لا تقم بالتحميل بدون معرف مستخدم
+            if (!userId) return;
             
             loadingSpinner.classList.remove('hidden');
             examsList.innerHTML = '';
             noExamsMessage.classList.add('hidden');
 
             try {
-                // ملاحظة: يتم افتراض أن الامتحانات محفوظة في مجلد عام يمكن للمستخدمين المجهولين قراءته.
-                // يجب التأكد من أن قواعد أمان Firestore تسمح بهذا الإجراء.
+                // تحميل الامتحانات من المجلد العام
                 const publicExamsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
                 const querySnapshot = await getDocs(publicExamsCollection);
 
@@ -348,7 +347,10 @@
         };
 
         // ربط زر الامتحانات بوظيفة التحميل
-        navExamsBtn.addEventListener('click', loadExams);
+        navExamsBtn.addEventListener('click', () => {
+            loadExams();
+            showPage('exams-page');
+        });
     </script>
 </body>
 </html>
