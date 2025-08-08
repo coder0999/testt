@@ -152,7 +152,7 @@
         // استيراد وظائف Firebase اللازمة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, query, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // تهيئة Firebase باستخدام التكوين الخاص بك
         const firebaseConfig = {
@@ -407,24 +407,32 @@
         // ربط زر تسليم الامتحان بالدالة
         submitExamBtn.addEventListener('click', submitExam);
 
-        // الاستماع لحالة المصادقة المجهولة
+        // الاستماع لحالة المصادقة
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 userId = user.uid;
-                console.log("تم تسجيل الدخول كمستخدم مجهول بنجاح:", userId);
+                console.log("تم تسجيل الدخول بنجاح. معرف المستخدم:", userId);
                 // بمجرد تسجيل الدخول، قم بتحميل الامتحانات لضمان جاهزيتها
                 loadExams();
             } else {
-                console.log("فشل تسجيل الدخول كمستخدم مجهول.");
+                console.log("لم يتم تسجيل الدخول بعد.");
             }
         });
         
-        // محاولة تسجيل الدخول كمستخدم مجهول عند تحميل الصفحة
+        // محاولة تسجيل الدخول عند تحميل الصفحة
         window.onload = async () => {
             try {
-                await signInAnonymously(auth);
+                // استخدام رمز المصادقة المخصص فقط، بدون خيار مجهول
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                    console.log("تم تسجيل الدخول بنجاح باستخدام رمز المصادقة المخصص.");
+                } else {
+                    // إذا لم يكن هناك رمز مخصص، فاعرض رسالة خطأ
+                    showCustomAlert("فشل في المصادقة. يرجى التأكد من توفر رمز المصادقة المخصص.");
+                    console.error("فشل تسجيل الدخول: رمز المصادقة المخصص غير متوفر.");
+                }
             } catch (error) {
-                console.error("فشل تسجيل الدخول المجهول:", error);
+                console.error("فشل تسجيل الدخول:", error);
                 showCustomAlert("فشل في المصادقة. يرجى المحاولة مرة أخرى.");
             }
         };
