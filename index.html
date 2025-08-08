@@ -152,10 +152,11 @@
         // استيراد وظائف Firebase اللازمة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, query, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // تهيئة Firebase باستخدام التكوين الخاص بك
-        const firebaseConfig = {
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyCzXajGeExTVfcMJ9L3fJjRl9TSu0apRZY",
             authDomain: "tanya-thanawey.firebaseapp.com",
             projectId: "tanya-thanawey",
@@ -170,7 +171,6 @@
         
         // المتغيرات العالمية للوصول إليها
         let userId = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tanya-thanawey';
         let currentExam = null;
         
         // الحصول على عناصر DOM الرئيسية
@@ -445,14 +445,14 @@
         // محاولة تسجيل الدخول عند تحميل الصفحة
         window.onload = async () => {
             try {
-                // استخدام رمز المصادقة المخصص فقط، بدون خيار مجهول
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
                     console.log("تم تسجيل الدخول بنجاح باستخدام رمز المصادقة المخصص.");
                 } else {
-                    // إذا لم يكن هناك رمز مخصص، فاعرض رسالة خطأ
-                    showCustomAlert("فشل في المصادقة. يرجى التأكد من توفر رمز المصادقة المخصص.");
-                    console.error("فشل تسجيل الدخول: رمز المصادقة المخصص غير متوفر.");
+                    await signInAnonymously(auth);
+                    console.log("تم تسجيل الدخول بنجاح بشكل مجهول.");
                 }
             } catch (error) {
                 console.error("فشل تسجيل الدخول:", error);
