@@ -142,7 +142,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // تهيئة Firebase باستخدام التكوين الخاص بك
-        // هذا التكوين مأخوذ من مشروعك السابق
         const firebaseConfig = {
             apiKey: "AIzaSyCzXajGeExTVfcMJ9L3fJjRl9TSu0apRZY",
             authDomain: "tanya-thanawey.firebaseapp.com",
@@ -227,7 +226,10 @@
         
         // مستمعو أحداث التنقل
         navHomeBtn.addEventListener('click', () => showPage('home-page'));
-        navExamsBtn.addEventListener('click', () => showPage('exams-page'));
+        navExamsBtn.addEventListener('click', () => {
+            loadExams();
+            showPage('exams-page');
+        });
         navEvaluationsBtn.addEventListener('click', () => showPage('evaluations-page'));
         backToExamsBtn.addEventListener('click', () => showPage('exams-page'));
         
