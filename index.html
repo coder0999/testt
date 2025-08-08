@@ -278,8 +278,20 @@
                     querySnapshot.forEach(doc => {
                         const examData = doc.data();
                         const examId = doc.id;
-                        // تأكد من أن تاريخ الإنشاء موجود قبل استخدامه
-                        const examDate = examData.createdAt ? new Date(examData.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : 'تاريخ غير متوفر';
+                        
+                        // معالجة حقل التاريخ بشكل آمن لتجنب الخطأ
+                        let examDate = 'تاريخ غير متوفر';
+                        if (examData.createdAt && typeof examData.createdAt.toDate === 'function') {
+                            examDate = new Date(examData.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                        } else if (examData.createdAt) {
+                            // إذا كان التاريخ مجرد سلسلة نصية
+                            try {
+                                examDate = new Date(examData.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                            } catch (e) {
+                                console.error("فشل تحويل التاريخ:", examData.createdAt, e);
+                                examDate = 'تاريخ غير صالح';
+                            }
+                        }
                         
                         // إنشاء بطاقة الامتحان
                         const examCard = document.createElement('div');
@@ -325,7 +337,17 @@
                     currentExam = examDoc.data();
                     const questions = currentExam.questions || [];
                     
-                    const examDate = currentExam.createdAt ? new Date(currentExam.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : 'تاريخ غير متوفر';
+                    // معالجة حقل التاريخ بشكل آمن هنا أيضاً
+                    let examDate = 'تاريخ غير متوفر';
+                    if (currentExam.createdAt && typeof currentExam.createdAt.toDate === 'function') {
+                        examDate = new Date(currentExam.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                    } else if (currentExam.createdAt) {
+                        try {
+                            examDate = new Date(currentExam.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                        } catch (e) {
+                            examDate = 'تاريخ غير صالح';
+                        }
+                    }
                     examTitle.textContent = `امتحان بتاريخ: ${examDate}`;
                     
                     questions.forEach((question, index) => {
