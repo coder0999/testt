@@ -259,13 +259,16 @@
         
         // دالة لتحميل وعرض الامتحانات المتاحة
         async function loadExams() {
-            if (!userId) return;
-            
             loadingSpinner.classList.remove('hidden');
             examsList.innerHTML = '';
             noExamsMessage.classList.add('hidden');
 
             try {
+                if (!userId) {
+                    showCustomAlert('الرجاء الانتظار حتى يتم تحميل البيانات.');
+                    return;
+                }
+
                 // تحميل الامتحانات من المجلد العام
                 const publicExamsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
                 const querySnapshot = await getDocs(publicExamsCollection);
