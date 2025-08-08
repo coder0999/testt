@@ -174,8 +174,6 @@
         let currentExam = null;
         
         // الحصول على عناصر DOM الرئيسية
-        const mainContent = document.getElementById('main-content');
-        
         const homePage = document.getElementById('home-page');
         const examsPage = document.getElementById('exams-page');
         const examViewPage = document.getElementById('exam-view-page');
@@ -244,7 +242,10 @@
         
         // مستمعو أحداث التنقل
         navHomeBtn.addEventListener('click', () => showPage('home-page'));
-        navExamsBtn.addEventListener('click', () => showPage('exams-page'));
+        navExamsBtn.addEventListener('click', () => {
+            showPage('exams-page');
+            loadExams();
+        });
         navEvaluationsBtn.addEventListener('click', () => showPage('evaluations-page'));
         backToExamsBtn.addEventListener('click', () => {
             // إعادة تعيين الصفحة قبل العودة
@@ -256,6 +257,11 @@
         
         // دالة لتحميل وعرض الامتحانات المتاحة
         async function loadExams() {
+            if (!userId) {
+                console.log("لم يتم إتمام المصادقة بعد، يرجى المحاولة لاحقاً.");
+                return;
+            }
+
             loadingSpinner.classList.remove('hidden');
             examsList.innerHTML = '';
             noExamsMessage.classList.add('hidden');
@@ -406,26 +412,32 @@
             if (user) {
                 userId = user.uid;
                 console.log("تم تسجيل الدخول كمستخدم مجهول بنجاح:", userId);
-                // قم بتحميل الامتحانات بمجرد تسجيل الدخول المجهول
-                showPage('home-page');
-                loadExams(); // <--- إضافة هذا السطر لحل مشكلة التحميل
+                // بمجرد تسجيل الدخول، قم بتحميل الامتحانات لضمان جاهزيتها
+                loadExams();
             } else {
                 console.log("فشل تسجيل الدخول كمستخدم مجهول.");
-                // يمكن عرض رسالة خطأ أو محاولة تسجيل الدخول مرة أخرى
             }
         });
+        
         // محاولة تسجيل الدخول كمستخدم مجهول عند تحميل الصفحة
         window.onload = async () => {
             try {
                 await signInAnonymously(auth);
             } catch (error) {
                 console.error("فشل تسجيل الدخول المجهول:", error);
+                showCustomAlert("فشل في المصادقة. يرجى المحاولة مرة أخرى.");
             }
         };
 
         // ربط زر الامتحانات بوظيفة التحميل
         navExamsBtn.addEventListener('click', () => {
             showPage('exams-page');
+            // عند الضغط على الزر، سيتم التحقق من وجود userId وسيتم تحميل الامتحانات إذا كان موجوداً
+            if (userId) {
+                loadExams(); 
+            } else {
+                showCustomAlert("يرجى الانتظار حتى يتم تسجيل الدخول تلقائياً.");
+            }
         });
     </script>
 </body>
