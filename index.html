@@ -95,6 +95,19 @@
             <div id="exam-questions-list">
                 <!-- سيتم عرض أسئلة الامتحان المختار هنا -->
             </div>
+            <div id="exam-actions" class="mt-8 text-center">
+                <button id="submit-exam-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition-colors hidden">
+                    تسليم الامتحان
+                </button>
+            </div>
+            <!-- قسم النتائج -->
+            <div id="exam-results" class="hidden mt-8 p-6 bg-gray-50 rounded-xl shadow-inner">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">نتائجك</h2>
+                <p class="text-center text-xl font-semibold mb-4">النتيجة النهائية: <span id="exam-score" class="text-blue-600"></span></p>
+                <div id="results-list" class="space-y-4">
+                    <!-- سيتم عرض تفاصيل النتائج هنا -->
+                </div>
+            </div>
         </div>
 
         <!-- صفحة التقييمات -->
@@ -158,6 +171,7 @@
         // المتغيرات العالمية للوصول إليها
         let userId = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tanya-thanawey';
+        let currentExam = null;
         
         // الحصول على عناصر DOM الرئيسية
         const mainContent = document.getElementById('main-content');
@@ -176,6 +190,10 @@
         const backToExamsBtn = document.getElementById('back-to-exams-btn');
         const examTitle = document.getElementById('exam-title');
         const examQuestionsList = document.getElementById('exam-questions-list');
+        const submitExamBtn = document.getElementById('submit-exam-btn');
+        const examResultsDiv = document.getElementById('exam-results');
+        const examScoreSpan = document.getElementById('exam-score');
+        const resultsListDiv = document.getElementById('results-list');
         const loadingSpinner = document.getElementById('loading-spinner');
 
         // عناصر المربع الحواري المخصص
@@ -231,7 +249,13 @@
             showPage('exams-page');
         });
         navEvaluationsBtn.addEventListener('click', () => showPage('evaluations-page'));
-        backToExamsBtn.addEventListener('click', () => showPage('exams-page'));
+        backToExamsBtn.addEventListener('click', () => {
+            // إعادة تعيين الصفحة قبل العودة
+            examQuestionsList.innerHTML = '';
+            examResultsDiv.classList.add('hidden');
+            submitExamBtn.classList.add('hidden');
+            showPage('exams-page');
+        });
         
         // دالة لتحميل وعرض الامتحانات المتاحة
         async function loadExams() {
@@ -252,7 +276,8 @@
                     querySnapshot.forEach(doc => {
                         const examData = doc.data();
                         const examId = doc.id;
-                        const examDate = new Date(examData.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                        // تأكد من أن تاريخ الإنشاء موجود قبل استخدامه
+                        const examDate = examData.createdAt ? new Date(examData.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : 'تاريخ غير متوفر';
                         
                         // إنشاء بطاقة الامتحان
                         const examCard = document.createElement('div');
@@ -287,15 +312,19 @@
         async function viewExam(examId) {
             loadingSpinner.classList.remove('hidden');
             examQuestionsList.innerHTML = '';
+            examResultsDiv.classList.add('hidden');
+            submitExamBtn.classList.add('hidden');
+
             try {
                 const examDocRef = doc(db, `artifacts/${appId}/public/data/exams`, examId);
                 const examDoc = await getDoc(examDocRef);
                 
                 if (examDoc.exists()) {
-                    const examData = examDoc.data();
-                    const questions = examData.questions || [];
+                    currentExam = examDoc.data();
+                    const questions = currentExam.questions || [];
                     
-                    examTitle.textContent = `امتحان بتاريخ: ${new Date(examData.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+                    const examDate = currentExam.createdAt ? new Date(currentExam.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : 'تاريخ غير متوفر';
+                    examTitle.textContent = `امتحان بتاريخ: ${examDate}`;
                     
                     questions.forEach((question, index) => {
                         const questionElement = document.createElement('div');
@@ -305,8 +334,8 @@
                             <div class="space-y-2">
                                 ${question.options.map(option => `
                                     <div class="flex items-center space-x-2 space-x-reverse">
-                                        <input type="radio" name="question-${index}" value="${option.text}" class="form-radio text-blue-600" disabled>
-                                        <label class="text-gray-600">${option.text}</label>
+                                        <input type="radio" name="question-${index}" value="${option}" class="form-radio text-blue-600">
+                                        <label class="text-gray-600">${option}</label>
                                     </div>
                                 `).join('')}
                             </div>
@@ -314,6 +343,7 @@
                         examQuestionsList.appendChild(questionElement);
                     });
 
+                    submitExamBtn.classList.remove('hidden');
                     showPage('exam-view-page');
                 } else {
                     showCustomAlert('الامتحان المطلوب غير موجود.');
@@ -325,6 +355,56 @@
                 loadingSpinner.classList.add('hidden');
             }
         }
+
+        // دالة لتسليم الامتحان وعرض النتائج
+        function submitExam() {
+            if (!currentExam) return;
+
+            let score = 0;
+            const results = [];
+            const questions = currentExam.questions;
+            
+            // إخفاء زر التسليم
+            submitExamBtn.classList.add('hidden');
+
+            questions.forEach((question, index) => {
+                const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
+                const isCorrect = selectedOption && selectedOption.value === question.correctAnswer;
+                
+                // تعطيل الأزرار بعد التسليم
+                document.querySelectorAll(`input[name="question-${index}"]`).forEach(input => input.disabled = true);
+
+                if (isCorrect) {
+                    score++;
+                }
+
+                results.push({
+                    questionText: question.text,
+                    userAnswer: selectedOption ? selectedOption.value : 'لم يتم الإجابة',
+                    correctAnswer: question.correctAnswer,
+                    isCorrect: isCorrect
+                });
+            });
+
+            // عرض النتائج
+            examScoreSpan.textContent = `${score} من ${questions.length}`;
+            resultsListDiv.innerHTML = '';
+            results.forEach((result, index) => {
+                const resultCard = document.createElement('div');
+                resultCard.className = `p-4 rounded-lg ${result.isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
+                resultCard.innerHTML = `
+                    <p class="font-bold text-lg text-gray-800">سؤال ${index + 1}: ${result.questionText}</p>
+                    <p class="mt-2">إجابتك: <span class="font-semibold ${result.isCorrect ? 'text-green-600' : 'text-red-600'}">${result.userAnswer}</span></p>
+                    ${!result.isCorrect ? `<p class="mt-1">الإجابة الصحيحة: <span class="font-semibold text-green-600">${result.correctAnswer}</span></p>` : ''}
+                `;
+                resultsListDiv.appendChild(resultCard);
+            });
+
+            examResultsDiv.classList.remove('hidden');
+        }
+
+        // ربط زر تسليم الامتحان بالدالة
+        submitExamBtn.addEventListener('click', submitExam);
 
         // الاستماع لحالة المصادقة المجهولة
         onAuthStateChanged(auth, (user) => {
