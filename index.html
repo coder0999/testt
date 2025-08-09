@@ -141,7 +141,7 @@
         // استيراد وظائف Firebase اللازمة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // تكوين Firebase
         const firebaseConfig = {
@@ -286,22 +286,13 @@
         // --- المصادقة وتحميل البيانات ---
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
-                // إذا لم يتم تسجيل الدخول، يتم تسجيل الدخول كمستخدم مجهول
-                try {
-                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                    if (token) {
-                        await signInWithCustomToken(auth, token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("فشل تسجيل الدخول:", error);
-                    showCustomAlert('فشل في تسجيل الدخول. الرجاء المحاولة مرة أخرى.');
-                }
+                // إذا لم يتم تسجيل الدخول، لا نفعل شيئًا.
+                // يمكن إضافة واجهة لتسجيل الدخول هنا لاحقًا إذا لزم الأمر.
+                showCustomAlert('الرجاء تسجيل الدخول لعرض الامتحانات.');
             }
         });
 
-        // بمجرد تسجيل الدخول (سواء كان المستخدم مجهولاً أو غير ذلك)، نبدأ في تحميل البيانات
+        // بمجرد تسجيل الدخول، نبدأ في تحميل البيانات
         auth.onAuthStateChanged(user => {
             if (user && !unsubscribeFromExams) {
                 loadingSpinner.classList.remove('hidden');
