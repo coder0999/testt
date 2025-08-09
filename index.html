@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عرض الامتحانات</title>
+    <title>صفحة الامتحانات</title>
     <!-- تضمين Tailwind CSS و Font Awesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,14 +11,15 @@
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         body {
             font-family: 'Cairo', sans-serif;
-            direction: rtl;
             background-color: #f3f4f6;
         }
-        /* تصميم للمربع الحواري المخصص */
+        .nav-icon {
+            font-size: 1.5rem;
+        }
         .custom-alert-overlay {
             position: fixed;
             top: 0;
-            left: 0;
+            right: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
@@ -35,9 +36,6 @@
             max-width: 400px;
             width: 90%;
             text-align: center;
-        }
-        .custom-alert-box button {
-            margin-top: 1rem;
         }
         .loading-overlay {
             position: fixed;
@@ -62,71 +60,62 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .nav-icon {
-            font-size: 1.5rem;
-        }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
 
     <!-- المحتوى الرئيسي للتطبيق -->
-    <div id="main-content" class="flex-grow flex flex-col">
+    <div class="flex-grow flex flex-col p-4 mb-20">
+        
         <!-- صفحة الرئيسية -->
-        <div id="home-page" class="container mx-auto p-8 bg-white rounded-xl shadow-2xl max-w-3xl w-full flex-grow mb-20 overflow-y-auto">
-            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">الصفحة الرئيسية</h1>
-            <p class="text-center text-gray-600">مرحباً بك في منصة الامتحانات. استخدم شريط التنقل السفلي لاستعراض الامتحانات المتاحة.</p>
+        <div id="home-page" class="hidden container mx-auto flex flex-col items-center">
+            <h1 class="text-4xl font-bold text-gray-800 my-8">الرئيسية</h1>
+            <p class="text-gray-600">أهلاً بك في صفحة الامتحانات</p>
         </div>
 
-        <!-- صفحة الامتحانات -->
-        <div id="exams-page" class="hidden container mx-auto p-8 bg-white rounded-xl shadow-2xl max-w-3xl w-full flex-grow mb-20 overflow-y-auto">
-            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">الامتحانات</h1>
-            <div id="exams-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- صفحة الامتحانات (عرض البطاقات) -->
+        <div id="exams-page" class="container mx-auto p-4 flex-grow">
+            <h1 class="text-4xl font-bold text-center text-gray-800 my-8">الامتحانات المتاحة</h1>
+            <div id="exams-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- سيتم عرض بطاقات الامتحانات هنا بواسطة JavaScript -->
-            </div>
-            <p id="no-exams-message" class="text-center text-gray-600 hidden mt-8">لا توجد امتحانات متاحة حالياً.</p>
-        </div>
-
-        <!-- صفحة عرض الامتحان الفردي -->
-        <div id="exam-view-page" class="hidden container mx-auto p-8 bg-white rounded-xl shadow-2xl max-w-3xl w-full flex-grow mb-20 overflow-y-auto">
-            <button id="back-to-exams-btn" class="mb-4 text-blue-600 hover:text-blue-800 font-bold">
-                <i class="fas fa-arrow-right ml-2"></i> العودة للامتحانات
-            </button>
-            <h1 id="exam-title" class="text-3xl font-bold text-gray-800 mb-6"></h1>
-            <div id="exam-questions-list">
-                <!-- سيتم عرض أسئلة الامتحان المختار هنا -->
-            </div>
-            <div id="exam-actions" class="mt-8 text-center">
-                <button id="submit-exam-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition-colors hidden">
-                    تسليم الامتحان
-                </button>
-            </div>
-            <!-- قسم النتائج -->
-            <div id="exam-results" class="hidden mt-8 p-6 bg-gray-50 rounded-xl shadow-inner">
-                <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">نتائجك</h2>
-                <p class="text-center text-xl font-semibold mb-4">النتيجة النهائية: <span id="exam-score" class="text-blue-600"></span></p>
-                <div id="results-list" class="space-y-4">
-                    <!-- سيتم عرض تفاصيل النتائج هنا -->
-                </div>
+                <p id="no-exams-message" class="col-span-full text-center text-gray-500 hidden">لا توجد امتحانات متاحة حالياً.</p>
             </div>
         </div>
 
         <!-- صفحة التقييمات -->
-        <div id="evaluations-page" class="hidden container mx-auto p-8 bg-white rounded-xl shadow-2xl max-w-3xl w-full flex-grow mb-20 overflow-y-auto">
-            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">التقييمات</h1>
-            <p class="text-center text-gray-600">هذه الصفحة قيد الإنشاء. ستكون هنا تقييمات الامتحانات.</p>
+        <div id="evaluations-page" class="hidden container mx-auto flex flex-col items-center">
+            <h1 class="text-4xl font-bold text-gray-800 my-8">التقييمات</h1>
+            <p class="text-gray-600">هذه الصفحة قيد الإنشاء.</p>
         </div>
+        
+        <!-- صفحة الامتحان (لعرض الأسئلة) -->
+        <div id="exam-view" class="hidden container mx-auto p-4 max-w-3xl flex-grow">
+            <h2 id="exam-title" class="text-3xl font-bold text-gray-800 text-center mb-6"></h2>
+            <div id="questions-container" class="space-y-6">
+                <!-- سيتم عرض أسئلة الامتحان هنا -->
+            </div>
+            <div class="flex justify-between mt-8">
+                <button id="submit-exam-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    إرسال الإجابات
+                </button>
+                <button id="back-to-exams-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    العودة
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <!-- شريط التنقل السفلي -->
     <nav id="bottom-nav" class="fixed bottom-0 left-0 w-full bg-white shadow-2xl z-10">
         <div class="flex justify-around items-center h-16">
-            <button id="nav-home-btn" class="flex flex-col items-center text-blue-600 focus:outline-none p-2">
+            <button id="nav-home-btn" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:outline-none p-2">
                 <i class="fas fa-home nav-icon"></i>
-                <span class="text-xs mt-1 font-bold">الرئيسية</span>
+                <span class="text-xs mt-1">الرئيسية</span>
             </button>
-            <button id="nav-exams-btn" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:outline-none p-2">
+            <button id="nav-exams-btn" class="flex flex-col items-center text-blue-600 focus:outline-none p-2">
                 <i class="fas fa-clipboard-list nav-icon"></i>
-                <span class="text-xs mt-1">الامتحانات</span>
+                <span class="text-xs mt-1 font-bold">الامتحانات</span>
             </button>
             <button id="nav-evaluations-btn" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:outline-none p-2">
                 <i class="fas fa-chart-bar nav-icon"></i>
@@ -151,12 +140,11 @@
     <script type="module">
         // استيراد وظائف Firebase اللازمة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
-        // تهيئة Firebase باستخدام التكوين الخاص بك
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+        // تكوين Firebase
+        const firebaseConfig = {
             apiKey: "AIzaSyCzXajGeExTVfcMJ9L3fJjRl9TSu0apRZY",
             authDomain: "tanya-thanawey.firebaseapp.com",
             projectId: "tanya-thanawey",
@@ -170,34 +158,30 @@
         const auth = getAuth(app);
         
         // المتغيرات العالمية للوصول إليها
-        let userId = null;
-        let currentExam = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tanya-thanawey';
+        let unsubscribeFromExams = null; // للاشتراك في التحديثات
         
-        // الحصول على عناصر DOM الرئيسية
+        // الحصول على عناصر DOM
         const homePage = document.getElementById('home-page');
         const examsPage = document.getElementById('exams-page');
-        const examViewPage = document.getElementById('exam-view-page');
         const evaluationsPage = document.getElementById('evaluations-page');
-        
-        const navHomeBtn = document.getElementById('nav-home-btn');
-        const navExamsBtn = document.getElementById('nav-exams-btn');
-        const navEvaluationsBtn = document.getElementById('nav-evaluations-btn');
+        const examView = document.getElementById('exam-view');
         
         const examsList = document.getElementById('exams-list');
         const noExamsMessage = document.getElementById('no-exams-message');
-        const backToExamsBtn = document.getElementById('back-to-exams-btn');
+        const questionsContainer = document.getElementById('questions-container');
         const examTitle = document.getElementById('exam-title');
-        const examQuestionsList = document.getElementById('exam-questions-list');
+        const backToExamsBtn = document.getElementById('back-to-exams-btn');
         const submitExamBtn = document.getElementById('submit-exam-btn');
-        const examResultsDiv = document.getElementById('exam-results');
-        const examScoreSpan = document.getElementById('exam-score');
-        const resultsListDiv = document.getElementById('results-list');
-        const loadingSpinner = document.getElementById('loading-spinner');
 
-        // عناصر المربع الحواري المخصص
+        const navHomeBtn = document.getElementById('nav-home-btn');
+        const navExamsBtn = document.getElementById('nav-exams-btn');
+        const navEvaluationsBtn = document.getElementById('nav-evaluations-btn');
+
         const customAlertOverlay = document.getElementById('custom-alert');
         const customAlertMessage = document.getElementById('custom-alert-message');
         const customAlertOkBtn = document.getElementById('custom-alert-ok');
+        const loadingSpinner = document.getElementById('loading-spinner');
 
         // دالة لعرض مربع حواري مخصص
         function showCustomAlert(message) {
@@ -212,264 +196,144 @@
 
         // دالة لتبديل عرض الصفحات
         function showPage(pageId) {
+            // إخفاء جميع الصفحات أولاً
             homePage.classList.add('hidden');
             examsPage.classList.add('hidden');
-            examViewPage.classList.add('hidden');
             evaluationsPage.classList.add('hidden');
+            examView.classList.add('hidden');
             
+            // إظهار الصفحة المطلوبة
             const activePage = document.getElementById(pageId);
             if (activePage) activePage.classList.remove('hidden');
 
             // تحديث أزرار التنقل
-            navHomeBtn.classList.remove('text-blue-600');
+            navHomeBtn.classList.remove('text-blue-600', 'font-bold');
             navHomeBtn.classList.add('text-gray-500');
-            navExamsBtn.classList.remove('text-blue-600');
+            navExamsBtn.classList.remove('text-blue-600', 'font-bold');
             navExamsBtn.classList.add('text-gray-500');
-            navEvaluationsBtn.classList.remove('text-blue-600');
+            navEvaluationsBtn.classList.remove('text-blue-600', 'font-bold');
             navEvaluationsBtn.classList.add('text-gray-500');
             
-            navHomeBtn.querySelector('span').classList.remove('font-bold');
-            navExamsBtn.querySelector('span').classList.remove('font-bold');
-            navEvaluationsBtn.querySelector('span').classList.remove('font-bold');
-
             const activeButton = document.querySelector(`#nav-${pageId.replace('-page', '')}-btn`);
             if (activeButton) {
                 activeButton.classList.remove('text-gray-500');
-                activeButton.classList.add('text-blue-600');
-                activeButton.querySelector('span').classList.add('font-bold');
+                activeButton.classList.add('text-blue-600', 'font-bold');
             }
         }
-        
+
         // مستمعو أحداث التنقل
         navHomeBtn.addEventListener('click', () => showPage('home-page'));
-        navExamsBtn.addEventListener('click', () => {
-            showPage('exams-page');
-            loadExams();
-        });
+        navExamsBtn.addEventListener('click', () => showPage('exams-page'));
         navEvaluationsBtn.addEventListener('click', () => showPage('evaluations-page'));
-        backToExamsBtn.addEventListener('click', () => {
-            // إعادة تعيين الصفحة قبل العودة
-            examQuestionsList.innerHTML = '';
-            examResultsDiv.classList.add('hidden');
-            submitExamBtn.classList.add('hidden');
-            showPage('exams-page');
+
+        // وظيفة لعرض بطاقات الامتحانات
+        function renderExamCards(exams) {
+            examsList.innerHTML = '';
+            if (exams.length === 0) {
+                noExamsMessage.classList.remove('hidden');
+            } else {
+                noExamsMessage.classList.add('hidden');
+                exams.forEach(exam => {
+                    const examCard = document.createElement('div');
+                    examCard.className = 'bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition-shadow cursor-pointer flex flex-col justify-between';
+                    examCard.dataset.id = exam.id;
+                    const examDate = new Date(exam.data.createdAt).toLocaleString();
+                    examCard.innerHTML = `
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">امتحان جديد</h3>
+                            <p class="text-gray-600 text-sm">تم الإنشاء: ${examDate}</p>
+                        </div>
+                    `;
+                    examCard.addEventListener('click', () => startExam(exam));
+                    examsList.appendChild(examCard);
+                });
+            }
+        }
+
+        // وظيفة لعرض صفحة الامتحان
+        function startExam(exam) {
+            showPage('exam-view');
+            examTitle.textContent = `امتحان تم إنشاؤه في: ${new Date(exam.data.createdAt).toLocaleString()}`;
+            questionsContainer.innerHTML = '';
+
+            exam.data.questions.forEach((question, index) => {
+                const questionElement = document.createElement('div');
+                questionElement.className = 'p-6 bg-white rounded-lg shadow-inner border border-gray-200';
+                questionElement.innerHTML = `
+                    <p class="font-bold text-lg text-gray-800 mb-4">سؤال ${index + 1}: ${question.text}</p>
+                    <div class="space-y-2">
+                        ${question.options.map((option, optIndex) => `
+                            <div class="flex items-center">
+                                <input type="radio" name="question-${index}" value="${option.text}" class="form-radio text-blue-600 focus:ring-blue-500 ml-2">
+                                <label class="text-gray-700">${option.text}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                questionsContainer.appendChild(questionElement);
+            });
+        }
+        
+        // مستمع لزر "العودة"
+        backToExamsBtn.addEventListener('click', () => showPage('exams-page'));
+
+        // مستمع لزر "إرسال الإجابات"
+        submitExamBtn.addEventListener('click', () => {
+            // هذه مجرد رسالة توضيحية. يمكن إضافة منطق لتقييم الإجابات هنا.
+            showCustomAlert('تم إرسال إجاباتك بنجاح!');
         });
         
-        // دالة لتحميل وعرض الامتحانات المتاحة
-        async function loadExams() {
-            if (!userId) {
-                console.log("لم يتم إتمام المصادقة بعد، يرجى المحاولة لاحقاً.");
-                return;
+        // --- المصادقة وتحميل البيانات ---
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                // إذا لم يتم تسجيل الدخول، يتم تسجيل الدخول كمستخدم مجهول
+                try {
+                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    if (token) {
+                        await signInWithCustomToken(auth, token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("فشل تسجيل الدخول:", error);
+                    showCustomAlert('فشل في تسجيل الدخول. الرجاء المحاولة مرة أخرى.');
+                }
             }
+        });
 
-            loadingSpinner.classList.remove('hidden');
-            examsList.innerHTML = '';
-            noExamsMessage.classList.add('hidden');
-
-            try {
-                // تحميل الامتحانات من المجلد العام في Firestore
-                const publicExamsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
-                console.log("جارٍ محاولة قراءة الامتحانات من المسار:", `artifacts/${appId}/public/data/exams`);
-                const querySnapshot = await getDocs(publicExamsCollection);
-
-                if (querySnapshot.empty) {
-                    noExamsMessage.classList.remove('hidden');
-                } else {
-                    querySnapshot.forEach(doc => {
-                        const examData = doc.data();
-                        const examId = doc.id;
-                        
-                        // معالجة حقل التاريخ بشكل آمن لتجنب الخطأ
-                        let examDate = 'تاريخ غير متوفر';
-                        if (examData.createdAt && typeof examData.createdAt.toDate === 'function') {
-                            examDate = new Date(examData.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-                        } else if (examData.createdAt) {
-                            // إذا كان التاريخ مجرد سلسلة نصية
-                            try {
-                                examDate = new Date(examData.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-                            } catch (e) {
-                                console.error("فشل تحويل التاريخ:", examData.createdAt, e);
-                                examDate = 'تاريخ غير صالح';
-                            }
-                        }
-                        
-                        // إنشاء بطاقة الامتحان
-                        const examCard = document.createElement('div');
-                        examCard.className = 'bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer';
-                        examCard.innerHTML = `
-                            <h3 class="text-xl font-bold text-gray-800 mb-2">امتحان بتاريخ: ${examDate}</h3>
-                            <p class="text-gray-600">هذا الامتحان يحتوي على ${examData.questions ? examData.questions.length : 0} سؤال.</p>
-                            <button data-id="${examId}" class="view-exam-btn mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                                عرض الامتحان
-                            </button>
-                        `;
-                        examsList.appendChild(examCard);
-                    });
-                    
-                    // ربط مستمعي الأحداث لزر "عرض الامتحان"
-                    document.querySelectorAll('.view-exam-btn').forEach(button => {
-                        button.addEventListener('click', async (e) => {
-                            const examId = e.target.dataset.id;
-                            await viewExam(examId);
+        // بمجرد تسجيل الدخول (سواء كان المستخدم مجهولاً أو غير ذلك)، نبدأ في تحميل البيانات
+        auth.onAuthStateChanged(user => {
+            if (user && !unsubscribeFromExams) {
+                loadingSpinner.classList.remove('hidden');
+                const examsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
+                
+                // الاستماع للتحديثات في الوقت الفعلي
+                unsubscribeFromExams = onSnapshot(examsCollection, (snapshot) => {
+                    const exams = [];
+                    snapshot.forEach(doc => {
+                        exams.push({
+                            id: doc.id,
+                            data: doc.data()
                         });
                     });
-                }
-            } catch (error) {
-                console.error("فشل تحميل الامتحانات:", error);
-                showCustomAlert('فشل في تحميل الامتحانات. الرجاء المحاولة مرة أخرى.');
-            } finally {
-                loadingSpinner.classList.add('hidden');
-            }
-        }
-
-        // دالة لعرض امتحان معين
-        async function viewExam(examId) {
-            loadingSpinner.classList.remove('hidden');
-            examQuestionsList.innerHTML = '';
-            examResultsDiv.classList.add('hidden');
-            submitExamBtn.classList.add('hidden');
-
-            try {
-                const examDocRef = doc(db, `artifacts/${appId}/public/data/exams`, examId);
-                const examDoc = await getDoc(examDocRef);
-                
-                if (examDoc.exists()) {
-                    currentExam = examDoc.data();
-                    const questions = currentExam.questions || [];
-                    
-                    // معالجة حقل التاريخ بشكل آمن هنا أيضاً
-                    let examDate = 'تاريخ غير متوفر';
-                    if (currentExam.createdAt && typeof currentExam.createdAt.toDate === 'function') {
-                        examDate = new Date(currentExam.createdAt.toDate()).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-                    } else if (currentExam.createdAt) {
-                        try {
-                            examDate = new Date(currentExam.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-                        } catch (e) {
-                            examDate = 'تاريخ غير صالح';
-                        }
-                    }
-                    examTitle.textContent = `امتحان بتاريخ: ${examDate}`;
-                    
-                    questions.forEach((question, index) => {
-                        const questionElement = document.createElement('div');
-                        questionElement.className = 'p-6 bg-gray-50 rounded-lg shadow-inner border border-gray-200 mb-6';
-                        questionElement.innerHTML = `
-                            <p class="font-bold text-lg text-gray-700 mb-4">سؤال ${index + 1}: ${question.text}</p>
-                            <div class="space-y-2">
-                                ${question.options.map(option => `
-                                    <div class="flex items-center space-x-2 space-x-reverse">
-                                        <input type="radio" name="question-${index}" value="${option}" class="form-radio text-blue-600">
-                                        <label class="text-gray-600">${option}</label>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                        examQuestionsList.appendChild(questionElement);
-                    });
-
-                    submitExamBtn.classList.remove('hidden');
-                    showPage('exam-view-page');
-                } else {
-                    showCustomAlert('الامتحان المطلوب غير موجود.');
-                }
-            } catch (error) {
-                console.error("فشل عرض الامتحان:", error);
-                showCustomAlert('حدث خطأ أثناء عرض الامتحان. الرجاء المحاولة مرة أخرى.');
-            } finally {
-                loadingSpinner.classList.add('hidden');
-            }
-        }
-
-        // دالة لتسليم الامتحان وعرض النتائج
-        function submitExam() {
-            if (!currentExam) return;
-
-            let score = 0;
-            const results = [];
-            const questions = currentExam.questions;
-            
-            // إخفاء زر التسليم
-            submitExamBtn.classList.add('hidden');
-
-            questions.forEach((question, index) => {
-                const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
-                const isCorrect = selectedOption && selectedOption.value === question.correctAnswer;
-                
-                // تعطيل الأزرار بعد التسليم
-                document.querySelectorAll(`input[name="question-${index}"]`).forEach(input => input.disabled = true);
-
-                if (isCorrect) {
-                    score++;
-                }
-
-                results.push({
-                    questionText: question.text,
-                    userAnswer: selectedOption ? selectedOption.value : 'لم يتم الإجابة',
-                    correctAnswer: question.correctAnswer,
-                    isCorrect: isCorrect
+                    renderExamCards(exams);
+                    loadingSpinner.classList.add('hidden');
+                }, (error) => {
+                    console.error("خطأ في جلب الامتحانات:", error);
+                    showCustomAlert('فشل في جلب قائمة الامتحانات.');
+                    loadingSpinner.classList.add('hidden');
                 });
-            });
-
-            // عرض النتائج
-            examScoreSpan.textContent = `${score} من ${questions.length}`;
-            resultsListDiv.innerHTML = '';
-            results.forEach((result, index) => {
-                const resultCard = document.createElement('div');
-                resultCard.className = `p-4 rounded-lg ${result.isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
-                resultCard.innerHTML = `
-                    <p class="font-bold text-lg text-gray-800">سؤال ${index + 1}: ${result.questionText}</p>
-                    <p class="mt-2">إجابتك: <span class="font-semibold ${result.isCorrect ? 'text-green-600' : 'text-red-600'}">${result.userAnswer}</span></p>
-                    ${!result.isCorrect ? `<p class="mt-1">الإجابة الصحيحة: <span class="font-semibold text-green-600">${result.correctAnswer}</span></p>` : ''}
-                `;
-                resultsListDiv.appendChild(resultCard);
-            });
-
-            examResultsDiv.classList.remove('hidden');
-        }
-
-        // ربط زر تسليم الامتحان بالدالة
-        submitExamBtn.addEventListener('click', submitExam);
-
-        // الاستماع لحالة المصادقة
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                userId = user.uid;
-                console.log("تم تسجيل الدخول بنجاح. معرف المستخدم:", userId);
-                // بمجرد تسجيل الدخول، قم بتحميل الامتحانات لضمان جاهزيتها
-                loadExams();
-            } else {
-                console.log("لم يتم تسجيل الدخول بعد.");
+            } else if (!user && unsubscribeFromExams) {
+                // إلغاء الاشتراك عند تسجيل الخروج
+                unsubscribeFromExams();
+                unsubscribeFromExams = null;
+                examsList.innerHTML = '';
             }
         });
         
-        // محاولة تسجيل الدخول عند تحميل الصفحة
-        window.onload = async () => {
-            try {
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                    console.log("تم تسجيل الدخول بنجاح باستخدام رمز المصادقة المخصص.");
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("تم تسجيل الدخول بنجاح بشكل مجهول.");
-                }
-            } catch (error) {
-                console.error("فشل تسجيل الدخول:", error);
-                showCustomAlert("فشل في المصادقة. يرجى المحاولة مرة أخرى.");
-            }
-        };
+        // عرض صفحة الامتحانات بشكل افتراضي عند تحميل الصفحة
+        showPage('exams-page');
 
-        // ربط زر الامتحانات بوظيفة التحميل
-        navExamsBtn.addEventListener('click', () => {
-            showPage('exams-page');
-            // عند الضغط على الزر، سيتم التحقق من وجود userId وسيتم تحميل الامتحانات إذا كان موجوداً
-            if (userId) {
-                loadExams(); 
-            } else {
-                showCustomAlert("يرجى الانتظار حتى يتم تسجيل الدخول تلقائياً.");
-            }
-        });
     </script>
 </body>
 </html>
