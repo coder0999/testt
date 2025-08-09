@@ -104,6 +104,19 @@
             </div>
         </div>
 
+        <!-- صفحة عرض النتائج (جديدة) -->
+        <div id="results-page" class="hidden container mx-auto p-4 max-w-3xl flex-grow">
+            <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">نتائج الامتحان</h2>
+            <div id="results-container" class="space-y-6">
+                <!-- سيتم عرض النتائج هنا بواسطة JavaScript -->
+            </div>
+            <div class="flex justify-center mt-8">
+                <button id="back-from-results-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    العودة إلى الامتحانات
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <!-- شريط التنقل السفلي -->
@@ -160,12 +173,14 @@
         // المتغيرات العالمية للوصول إليها
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tanya-thanawey';
         let unsubscribeFromExams = null; // للاشتراك في التحديثات
+        let currentExam = null; // لتخزين الامتحان الحالي
         
         // الحصول على عناصر DOM
         const homePage = document.getElementById('home-page');
         const examsPage = document.getElementById('exams-page');
         const evaluationsPage = document.getElementById('evaluations-page');
         const examView = document.getElementById('exam-view');
+        const resultsPage = document.getElementById('results-page'); // العنصر الجديد لصفحة النتائج
         
         const examsList = document.getElementById('exams-list');
         const noExamsMessage = document.getElementById('no-exams-message');
@@ -173,6 +188,9 @@
         const examTitle = document.getElementById('exam-title');
         const backToExamsBtn = document.getElementById('back-to-exams-btn');
         const submitExamBtn = document.getElementById('submit-exam-btn');
+
+        const resultsContainer = document.getElementById('results-container'); // حاوية النتائج
+        const backFromResultsBtn = document.getElementById('back-from-results-btn'); // زر العودة من النتائج
 
         const navHomeBtn = document.getElementById('nav-home-btn');
         const navExamsBtn = document.getElementById('nav-exams-btn');
@@ -201,6 +219,7 @@
             examsPage.classList.add('hidden');
             evaluationsPage.classList.add('hidden');
             examView.classList.add('hidden');
+            resultsPage.classList.add('hidden');
             
             // إظهار الصفحة المطلوبة
             const activePage = document.getElementById(pageId);
@@ -252,6 +271,7 @@
 
         // وظيفة لعرض صفحة الامتحان
         function startExam(exam) {
+            currentExam = exam; // حفظ الامتحان الحالي
             showPage('exam-view');
             examTitle.textContent = `امتحان تم إنشاؤه في: ${new Date(exam.data.createdAt).toLocaleString()}`;
             questionsContainer.innerHTML = '';
@@ -274,13 +294,59 @@
             });
         }
         
+        // وظيفة جديدة لعرض صفحة النتائج
+        function showResultsPage(exam, userAnswers) {
+            showPage('results-page');
+            resultsContainer.innerHTML = '';
+            
+            exam.data.questions.forEach((question, index) => {
+                const userAnswer = userAnswers[index];
+                // الافتراض هنا أن الخيار الصحيح هو الأول في المصفوفة
+                // بناءً على الكود في الملف 522.txt
+                const correctAnswer = question.options[0].text;
+                const isCorrect = userAnswer === correctAnswer;
+                
+                const resultElement = document.createElement('div');
+                resultElement.className = 'p-6 bg-white rounded-lg shadow-inner border border-gray-200';
+                
+                let optionsHtml = question.options.map(option => {
+                    let optionClass = '';
+                    if (option.text === userAnswer) {
+                        optionClass = isCorrect ? 'text-green-600' : 'text-red-600';
+                    }
+                    return `<div class="text-gray-700 ${optionClass}">${option.text}</div>`;
+                }).join('');
+                
+                resultElement.innerHTML = `
+                    <p class="font-bold text-lg text-gray-800 mb-4">سؤال ${index + 1}: ${question.text}</p>
+                    <div class="space-y-2">
+                        ${optionsHtml}
+                    </div>
+                `;
+                resultsContainer.appendChild(resultElement);
+            });
+        }
+        
         // مستمع لزر "العودة"
         backToExamsBtn.addEventListener('click', () => showPage('exams-page'));
 
+        // مستمع لزر "العودة من صفحة النتائج"
+        backFromResultsBtn.addEventListener('click', () => showPage('exams-page'));
+
         // مستمع لزر "إرسال الإجابات"
         submitExamBtn.addEventListener('click', () => {
-            // هذه مجرد رسالة توضيحية. يمكن إضافة منطق لتقييم الإجابات هنا.
-            showCustomAlert('تم إرسال إجاباتك بنجاح!');
+            const userAnswers = [];
+            currentExam.data.questions.forEach((question, index) => {
+                const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
+                if (selectedOption) {
+                    userAnswers.push(selectedOption.value);
+                } else {
+                    userAnswers.push(null); // إذا لم يتم اختيار أي خيار
+                }
+            });
+
+            // عرض صفحة النتائج
+            showResultsPage(currentExam, userAnswers);
         });
         
         // --- المصادقة وتحميل البيانات ---
