@@ -66,12 +66,6 @@
 
     <!-- المحتوى الرئيسي للتطبيق -->
     <div class="flex-grow flex flex-col p-4 mb-20">
-        
-        <!-- صفحة الرئيسية -->
-        <div id="home-page" class="hidden container mx-auto flex flex-col items-center">
-            <h1 class="text-4xl font-bold text-gray-800 my-8">الرئيسية</h1>
-            <p class="text-gray-600">أهلاً بك في صفحة الامتحانات</p>
-        </div>
 
         <!-- صفحة الامتحانات (عرض البطاقات) -->
         <div id="exams-page" class="container mx-auto p-4 flex-grow">
@@ -83,9 +77,11 @@
         </div>
 
         <!-- صفحة التقييمات -->
-        <div id="evaluations-page" class="hidden container mx-auto flex flex-col items-center">
-            <h1 class="text-4xl font-bold text-gray-800 my-8">التقييمات</h1>
-            <p class="text-gray-600">هذه الصفحة قيد الإنشاء.</p>
+        <div id="evaluations-page" class="hidden container mx-auto p-4 flex-grow">
+            <h1 class="text-4xl font-bold text-center text-gray-800 my-8">المواد الدراسية</h1>
+            <div id="subjects-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Subject cards will be loaded here -->
+            </div>
         </div>
         
         <!-- صفحة الامتحان (لعرض الأسئلة) -->
@@ -122,10 +118,6 @@
     <!-- شريط التنقل السفلي -->
     <nav id="bottom-nav" class="fixed bottom-0 left-0 w-full bg-white shadow-2xl z-10">
         <div class="flex justify-around items-center h-16">
-            <button id="nav-home-btn" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:outline-none p-2">
-                <i class="fas fa-home nav-icon"></i>
-                <span class="text-xs mt-1">الرئيسية</span>
-            </button>
             <button id="nav-exams-btn" class="flex flex-col items-center text-blue-600 focus:outline-none p-2">
                 <i class="fas fa-clipboard-list nav-icon"></i>
                 <span class="text-xs mt-1 font-bold">الامتحانات</span>
@@ -153,7 +145,7 @@
     <script type="module">
         // استيراد وظائف Firebase اللازمة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // تكوين Firebase
@@ -176,7 +168,6 @@
         let currentExam = null; // لتخزين الامتحان الحالي
         
         // الحصول على عناصر DOM
-        const homePage = document.getElementById('home-page');
         const examsPage = document.getElementById('exams-page');
         const evaluationsPage = document.getElementById('evaluations-page');
         const examView = document.getElementById('exam-view');
@@ -192,7 +183,6 @@
         const resultsContainer = document.getElementById('results-container'); // حاوية النتائج
         const backFromResultsBtn = document.getElementById('back-from-results-btn'); // زر العودة من النتائج
 
-        const navHomeBtn = document.getElementById('nav-home-btn');
         const navExamsBtn = document.getElementById('nav-exams-btn');
         const navEvaluationsBtn = document.getElementById('nav-evaluations-btn');
 
@@ -212,10 +202,50 @@
             customAlertOverlay.classList.add('hidden');
         });
 
+        // *** NEW FUNCTION TO RENDER SUBJECTS ***
+        async function renderSubjects() {
+            const subjectsContainer = document.getElementById('subjects-container');
+            if (!subjectsContainer) return;
+
+            subjectsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">Loading subjects...</p>`;
+            
+            try {
+                const subjectsCollectionRef = collection(db, `artifacts/${appId}/public/data/subjects`);
+                const querySnapshot = await getDocs(subjectsCollectionRef);
+                
+                if (querySnapshot.empty) {
+                    subjectsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No subjects found.</p>`;
+                    return;
+                }
+
+                subjectsContainer.innerHTML = ''; // Clear loading message
+                querySnapshot.forEach((doc) => {
+                    const subject = doc.data();
+                    const subjectCard = document.createElement('a');
+                    subjectCard.href = subject.link || '#';
+                    subjectCard.target = '_blank';
+                    subjectCard.rel = 'noopener noreferrer';
+                    subjectCard.className = 'bg-white rounded-xl shadow-md p-6 flex flex-col items-center justify-center space-y-4 hover:shadow-lg transition-shadow cursor-pointer no-underline';
+                    
+                    subjectCard.innerHTML = `
+                        <h3 class="text-xl font-bold text-gray-800 text-center">${subject.name}</h3>
+                        <div class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-download"></i>
+                            <span>تنزيل</span>
+                        </div>
+                    `;
+                    subjectsContainer.appendChild(subjectCard);
+                });
+
+            } catch (error) {
+                console.error("Error rendering subjects:", error);
+                subjectsContainer.innerHTML = `<p class="text-center text-red-500 col-span-full">Error loading subjects.</p>`;
+            }
+        }
+
         // دالة لتبديل عرض الصفحات
         function showPage(pageId) {
             // إخفاء جميع الصفحات أولاً
-            homePage.classList.add('hidden');
             examsPage.classList.add('hidden');
             evaluationsPage.classList.add('hidden');
             examView.classList.add('hidden');
@@ -226,8 +256,6 @@
             if (activePage) activePage.classList.remove('hidden');
 
             // تحديث أزرار التنقل
-            navHomeBtn.classList.remove('text-blue-600', 'font-bold');
-            navHomeBtn.classList.add('text-gray-500');
             navExamsBtn.classList.remove('text-blue-600', 'font-bold');
             navExamsBtn.classList.add('text-gray-500');
             navEvaluationsBtn.classList.remove('text-blue-600', 'font-bold');
@@ -238,10 +266,13 @@
                 activeButton.classList.remove('text-gray-500');
                 activeButton.classList.add('text-blue-600', 'font-bold');
             }
+
+            if (pageId === 'evaluations-page') {
+                renderSubjects();
+            }
         }
 
         // مستمعو أحداث التنقل
-        navHomeBtn.addEventListener('click', () => showPage('home-page'));
         navExamsBtn.addEventListener('click', () => showPage('exams-page'));
         navEvaluationsBtn.addEventListener('click', () => showPage('evaluations-page'));
 
@@ -278,7 +309,7 @@
 
             exam.data.questions.forEach((question, index) => {
                 const questionElement = document.createElement('div');
-                questionElement.className = 'p-6 bg-white rounded-lg shadow-inner border border-gray-200';
+                questionElement.className = 'p-6 bg-white rounded-lg shadow-md';
                 questionElement.innerHTML = `
                     <p class="font-bold text-lg text-gray-800 mb-4">سؤال ${index + 1}: ${question.text}</p>
                     <div class="space-y-2">
