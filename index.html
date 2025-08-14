@@ -185,6 +185,7 @@
         // المتغيرات العالمية للوصول إليها
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tanya-thanawey';
         let unsubscribeFromExams = null; // للاشتراك في التحديثات
+        let unsubscribeFromSubjects = null;
         let currentExam = null; // لتخزين الامتحان الحالي
         
         // الحصول على عناصر DOM
@@ -222,24 +223,24 @@
             customAlertOverlay.classList.add('hidden');
         });
 
-        // *** NEW FUNCTION TO RENDER SUBJECTS ***
-        async function renderSubjects() {
+        function listenForSubjects() {
+            if (unsubscribeFromSubjects) {
+                return; // Listener already active
+            }
+
             const subjectsContainer = document.getElementById('subjects-container');
             if (!subjectsContainer) return;
 
-            subjectsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">Loading subjects...</p>`;
+            const subjectsCollectionRef = collection(db, `artifacts/${appId}/public/data/subjects`);
             
-            try {
-                const subjectsCollectionRef = collection(db, `artifacts/${appId}/public/data/subjects`);
-                const querySnapshot = await getDocs(subjectsCollectionRef);
-                
-                if (querySnapshot.empty) {
-                    subjectsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No subjects found.</p>`;
+            unsubscribeFromSubjects = onSnapshot(subjectsCollectionRef, (snapshot) => {
+                subjectsContainer.innerHTML = ''; // Clear previous content
+                if (snapshot.empty) {
+                    subjectsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">لا توجد مواد متاحة.</p>`;
                     return;
                 }
 
-                subjectsContainer.innerHTML = ''; // Clear loading message
-                querySnapshot.forEach((doc) => {
+                snapshot.forEach((doc) => {
                     const subject = doc.data();
                     const subjectCard = document.createElement('a');
                     subjectCard.href = subject.link || '#';
@@ -256,11 +257,10 @@
                     `;
                     subjectsContainer.appendChild(subjectCard);
                 });
-
-            } catch (error) {
-                console.error("Error rendering subjects:", error);
+            }, (error) => {
+                console.error("Error listening for subjects:", error);
                 subjectsContainer.innerHTML = `<p class="text-center text-red-500 col-span-full">Error loading subjects.</p>`;
-            }
+            });
         }
 
         // دالة لتبديل عرض الصفحات
@@ -288,7 +288,7 @@
             }
 
             if (pageId === 'evaluations-page') {
-                renderSubjects();
+                listenForSubjects();
             }
         }
 
@@ -413,31 +413,41 @@
 
         // بمجرد تسجيل الدخول، نبدأ في تحميل البيانات
         auth.onAuthStateChanged(user => {
-            if (user && !unsubscribeFromExams) {
-                loadingSpinner.classList.remove('hidden');
-                const examsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
-                
-                // الاستماع للتحديثات في الوقت الفعلي
-                unsubscribeFromExams = onSnapshot(examsCollection, (snapshot) => {
-                    const exams = [];
-                    snapshot.forEach(doc => {
-                        exams.push({
-                            id: doc.id,
-                            data: doc.data()
+            if (user) {
+                // User is signed in, set up listeners if not already active.
+                if (!unsubscribeFromExams) {
+                    loadingSpinner.classList.remove('hidden');
+                    const examsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
+                    
+                    unsubscribeFromExams = onSnapshot(examsCollection, (snapshot) => {
+                        const exams = [];
+                        snapshot.forEach(doc => {
+                            exams.push({
+                                id: doc.id,
+                                data: doc.data()
+                            });
                         });
+                        renderExamCards(exams);
+                        loadingSpinner.classList.add('hidden');
+                    }, (error) => {
+                        console.error("خطأ في جلب الامتحانات:", error);
+                        showCustomAlert('فشل في جلب قائمة الامتحانات.');
+                        loadingSpinner.classList.add('hidden');
                     });
-                    renderExamCards(exams);
-                    loadingSpinner.classList.add('hidden');
-                }, (error) => {
-                    console.error("خطأ في جلب الامتحانات:", error);
-                    showCustomAlert('فشل في جلب قائمة الامتحانات.');
-                    loadingSpinner.classList.add('hidden');
-                });
-            } else if (!user && unsubscribeFromExams) {
-                // إلغاء الاشتراك عند تسجيل الخروج
-                unsubscribeFromExams();
-                unsubscribeFromExams = null;
+                }
+            } else {
+                // User is signed out, unsubscribe from all listeners.
+                if (unsubscribeFromExams) {
+                    unsubscribeFromExams();
+                    unsubscribeFromExams = null;
+                }
+                if (unsubscribeFromSubjects) {
+                    unsubscribeFromSubjects();
+                    unsubscribeFromSubjects = null;
+                }
                 examsList.innerHTML = '';
+                const subjectsContainer = document.getElementById('subjects-container');
+                if (subjectsContainer) subjectsContainer.innerHTML = '';
             }
         });
         
