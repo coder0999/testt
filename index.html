@@ -90,12 +90,9 @@
             <div id="questions-container" class="space-y-6">
                 <!-- سيتم عرض أسئلة الامتحان هنا -->
             </div>
-            <div class="flex justify-between mt-8">
-                <button id="submit-exam-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+            <div class="flex justify-center mt-8">
+                <button id="submit-exam-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform">
                     إرسال الإجابات
-                </button>
-                <button id="back-to-exams-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                    العودة
                 </button>
             </div>
         </div>
@@ -107,7 +104,7 @@
                 <!-- سيتم عرض النتائج هنا بواسطة JavaScript -->
             </div>
             <div class="flex justify-center mt-8">
-                <button id="back-from-results-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                <button id="back-from-results-btn" class="bg-gray-400 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform">
                     العودة إلى الامتحانات
                 </button>
             </div>
@@ -125,7 +122,7 @@
 </svg>
                 <span class="text-xs mt-1 font-bold">الامتحانات</span>
             </button>
-            <button id="nav-evaluations-btn" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:outline-none p-2">
+            <button id="nav-evaluations-btn" class="flex flex-col items-center text-gray-500 focus:outline-none p-2">
                 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
 <svg fill="currentColor" height="24px" width="24px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
@@ -153,7 +150,7 @@
     <div id="custom-alert" class="custom-alert-overlay hidden">
         <div class="custom-alert-box">
             <p id="custom-alert-message" class="text-lg text-gray-700"></p>
-            <button id="custom-alert-ok" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">موافق</button>
+            <button id="custom-alert-ok" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">موافق</button>
         </div>
     </div>
 
@@ -198,7 +195,6 @@
         const noExamsMessage = document.getElementById('no-exams-message');
         const questionsContainer = document.getElementById('questions-container');
         const examTitle = document.getElementById('exam-title');
-        const backToExamsBtn = document.getElementById('back-to-exams-btn');
         const submitExamBtn = document.getElementById('submit-exam-btn');
 
         const resultsContainer = document.getElementById('results-container'); // حاوية النتائج
@@ -206,6 +202,7 @@
 
         const navExamsBtn = document.getElementById('nav-exams-btn');
         const navEvaluationsBtn = document.getElementById('nav-evaluations-btn');
+        const bottomNav = document.getElementById('bottom-nav');
 
         const customAlertOverlay = document.getElementById('custom-alert');
         const customAlertMessage = document.getElementById('custom-alert-message');
@@ -246,11 +243,11 @@
                     subjectCard.href = subject.link || '#';
                     subjectCard.target = '_blank';
                     subjectCard.rel = 'noopener noreferrer';
-                    subjectCard.className = 'bg-white rounded-xl shadow-md p-6 flex flex-col items-center justify-center space-y-4 hover:shadow-lg transition-shadow cursor-pointer no-underline';
+                    subjectCard.className = 'bg-white rounded-xl shadow-md p-6 flex flex-col items-center justify-center space-y-4 cursor-pointer no-underline';
                     
                     subjectCard.innerHTML = `
                         <h3 class="text-xl font-bold text-gray-800 text-center">${subject.name}</h3>
-                        <div class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2 space-x-reverse">
+                        <div class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 space-x-reverse">
                             <i class="fas fa-download"></i>
                             <span>تنزيل</span>
                         </div>
@@ -274,6 +271,13 @@
             // إظهار الصفحة المطلوبة
             const activePage = document.getElementById(pageId);
             if (activePage) activePage.classList.remove('hidden');
+
+            // إظهار أو إخفاء شريط التنقل
+            if (pageId === 'exam-view' || pageId === 'results-page') {
+                bottomNav.classList.add('hidden');
+            } else {
+                bottomNav.classList.remove('hidden');
+            }
 
             // تحديث أزرار التنقل
             navExamsBtn.classList.remove('text-blue-600', 'font-bold');
@@ -305,7 +309,7 @@
                 noExamsMessage.classList.add('hidden');
                 exams.forEach(exam => {
                     const examCard = document.createElement('div');
-                    examCard.className = 'bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition-shadow cursor-pointer flex flex-col justify-between';
+                    examCard.className = 'bg-white p-6 rounded-xl shadow-lg cursor-pointer flex flex-col justify-between';
                     examCard.dataset.id = exam.id;
                     const examName = exam.data.name || `امتحان ${exam.id}`;
                     examCard.innerHTML = `
@@ -357,7 +361,6 @@
             exam.data.questions.forEach((question, index) => {
                 const userAnswer = userAnswers[index];
                 
-                // FIX: Use 'correctAnswer' instead of 'correctIndex' based on the database screenshot
                 let correctAnswerIndex = question.correctAnswer; 
                 let correctAnswerText = "لا توجد إجابة صحيحة محددة"; // Default text
                 let userAnswerIndex = -1;
@@ -411,9 +414,6 @@
                     <div class="space-y-3">
                         ${optionsHtml}
                     </div>
-                    <div class="mt-4 p-3 bg-blue-50 rounded-lg">
-                        <p class="font-bold text-blue-800">الإجابة النموذجية: ${correctAnswerText}</p>
-                    </div>
                 `;
                 resultsContainer.appendChild(resultElement);
             });
@@ -430,9 +430,6 @@
         }
         
         // مستمع لزر "العودة"
-        backToExamsBtn.addEventListener('click', () => showPage('exams-page'));
-
-        // مستمع لزر "العودة من صفحة النتائج"
         backFromResultsBtn.addEventListener('click', () => showPage('exams-page'));
 
         // مستمع لزر "إرسال الإجابات"
