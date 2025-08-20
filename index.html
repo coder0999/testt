@@ -356,15 +356,27 @@
 
             exam.data.questions.forEach((question, index) => {
                 const userAnswer = userAnswers[index];
-                // The correct answer is now identified by its index in the options array.
-                const correctIndex = question.correctIndex;
-                const correctAnswerObject = question.options[correctIndex];
-                const correctAnswerText = typeof correctAnswerObject === 'string' ? correctAnswerObject : correctAnswerObject.text;
+                
+                let correctIndex = question.correctIndex;
+                let correctAnswerText = "لا توجد إجابة صحيحة محددة"; // Default text
+                let userAnswerIndex = -1;
 
-                const userAnswerIndex = question.options.findIndex(opt => (typeof opt === 'string' ? opt : opt.text) === userAnswer);
+                // Find user answer index first
+                if (userAnswer) {
+                    userAnswerIndex = question.options.findIndex(opt => (typeof opt === 'string' ? opt : opt.text) === userAnswer);
+                }
 
-                if (userAnswerIndex === correctIndex) {
-                    correctAnswersCount++;
+                // Check if correctIndex is valid and get the correct answer text
+                if (typeof correctIndex === 'number' && correctIndex >= 0 && correctIndex < question.options.length) {
+                    const correctAnswerObject = question.options[correctIndex];
+                    correctAnswerText = typeof correctAnswerObject === 'string' ? correctAnswerObject : correctAnswerObject.text;
+
+                    if (userAnswerIndex === correctIndex) {
+                        correctAnswersCount++;
+                    }
+                } else {
+                    console.error(`Invalid or missing correctIndex for question ${index + 1}:`, question);
+                    correctIndex = -1; // Set to an invalid index
                 }
                 
                 const resultElement = document.createElement('div');
