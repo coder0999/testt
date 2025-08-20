@@ -357,7 +357,8 @@
             exam.data.questions.forEach((question, index) => {
                 const userAnswer = userAnswers[index];
                 
-                let correctIndex = question.correctIndex;
+                // FIX: Use 'correctAnswer' instead of 'correctIndex' based on the database screenshot
+                let correctAnswerIndex = question.correctAnswer; 
                 let correctAnswerText = "لا توجد إجابة صحيحة محددة"; // Default text
                 let userAnswerIndex = -1;
 
@@ -366,17 +367,17 @@
                     userAnswerIndex = question.options.findIndex(opt => (typeof opt === 'string' ? opt : opt.text) === userAnswer);
                 }
 
-                // Check if correctIndex is valid and get the correct answer text
-                if (typeof correctIndex === 'number' && correctIndex >= 0 && correctIndex < question.options.length) {
-                    const correctAnswerObject = question.options[correctIndex];
+                // Check if correctAnswerIndex is valid and get the correct answer text
+                if (typeof correctAnswerIndex === 'number' && correctAnswerIndex >= 0 && correctAnswerIndex < question.options.length) {
+                    const correctAnswerObject = question.options[correctAnswerIndex];
                     correctAnswerText = typeof correctAnswerObject === 'string' ? correctAnswerObject : correctAnswerObject.text;
 
-                    if (userAnswerIndex === correctIndex) {
+                    if (userAnswerIndex === correctAnswerIndex) {
                         correctAnswersCount++;
                     }
                 } else {
-                    console.error(`Invalid or missing correctIndex for question ${index + 1}:`, question);
-                    correctIndex = -1; // Set to an invalid index
+                    console.error(`Invalid or missing correctAnswer for question ${index + 1}:`, question);
+                    correctAnswerIndex = -1; // Set to an invalid index
                 }
                 
                 const resultElement = document.createElement('div');
@@ -388,13 +389,13 @@
                     let icon = '';
 
                     // Style the correct answer in green
-                    if (optIndex === correctIndex) {
+                    if (optIndex === correctAnswerIndex) {
                         style = 'background-color: #d1fae5; color: #047857;'; // green
                         icon = '<i class="fas fa-check-circle text-green-600 ml-2"></i>';
                     }
 
                     // If user's answer is wrong, style it in red
-                    if (userAnswerIndex === optIndex && userAnswerIndex !== correctIndex) {
+                    if (userAnswerIndex === optIndex && userAnswerIndex !== correctAnswerIndex) {
                         style = 'background-color: #fee2e2; color: #b91c1c;'; // red
                         icon = '<i class="fas fa-times-circle text-red-600 ml-2"></i>';
                     }
