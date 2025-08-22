@@ -153,7 +153,7 @@
 <body class="bg-gray-100 flex flex-col min-h-screen">
 
     <!-- المحتوى الرئيسي للتطبيق -->
-    <div class="flex-grow flex flex-col p-4 mb-20">
+    <div class="flex-grow flex flex-col p-2 mb-20">
 
         <!-- صفحة الامتحانات (عرض البطاقات) -->
         <div id="exams-page" class="container mx-auto p-4 flex-grow">
@@ -438,7 +438,7 @@
 
             exam.data.questions.forEach((question, index) => {
                 const questionElement = document.createElement('div');
-                questionElement.className = 'p-6 bg-white rounded-lg shadow-md relative';
+                questionElement.className = 'p-6 bg-white rounded-lg shadow-md relative w-full';
                 questionElement.innerHTML = `
                     <div class="question-number-box">
                         <span>${index + 1}</span>
@@ -487,7 +487,7 @@
                 }
                 
                 const resultElement = document.createElement('div');
-                resultElement.className = 'p-6 bg-white rounded-lg shadow-md relative';
+                resultElement.className = 'p-6 bg-white rounded-lg shadow-md relative w-full';
                 
                 let optionsHtml = question.options.map((option, optIndex) => {
                     const optionText = typeof option === 'string' ? option : option.text;
