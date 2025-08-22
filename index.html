@@ -336,13 +336,13 @@
                 const questionElement = document.createElement('div');
                 questionElement.className = 'p-6 bg-white rounded-lg shadow-md';
                 questionElement.innerHTML = `
-                    <p class="font-bold text-lg text-gray-800 mb-4">سؤال ${index + 1}: ${question.text}</p>
+                    <p class="font-bold text-base text-gray-800 mb-4 break-words">سؤال ${index + 1}: ${question.text}</p>
                     <div class="space-y-2">
                         ${question.options.map((option, optIndex) => {
                             const optionText = typeof option === 'string' ? option : option.text;
                             return `<div class="flex items-center p-2 rounded-lg">
                                 <input type="radio" name="question-${index}" value="${optionText}" class="form-radio text-blue-600 focus:ring-blue-500 ml-2">
-                                <label class="text-gray-700">${optionText}</label>
+                                <label class="text-gray-700 text-sm">${optionText}</label>
                             </div>`;
                         }).join('')}
                     </div>
