@@ -60,6 +60,54 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Custom radio button */
+        .custom-radio .form-radio {
+            display: none;
+        }
+
+        .custom-radio label {
+            position: relative;
+            padding-right: 35px;
+            cursor: pointer;
+            display: inline-block;
+            line-height: 25px;
+        }
+
+        .custom-radio label:before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            background-color: #fff;
+            transition: border-color 0.2s ease-in-out;
+        }
+
+        .custom-radio input[type="radio"]:checked + label:before {
+            border-color: #2563eb;
+        }
+
+        .custom-radio label:after {
+            content: '';
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #2563eb;
+            transform: translateY(-50%) scale(0);
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .custom-radio input[type="radio"]:checked + label:after {
+            transform: translateY(-50%) scale(1);
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
@@ -85,7 +133,7 @@
         </div>
         
         <!-- صفحة الامتحان (لعرض الأسئلة) -->
-        <div id="exam-view" class="hidden container mx-auto p-4 max-w-3xl flex-grow">
+        <div id="exam-view" class="hidden mx-auto px-2 py-4 flex-grow">
             <h2 id="exam-title" class="text-3xl font-bold text-gray-800 text-center mb-6"></h2>
             <div id="questions-container" class="space-y-6">
                 <!-- سيتم عرض أسئلة الامتحان هنا -->
@@ -336,13 +384,14 @@
                 const questionElement = document.createElement('div');
                 questionElement.className = 'p-6 bg-white rounded-lg shadow-md';
                 questionElement.innerHTML = `
-                    <p class="font-bold text-base text-gray-800 mb-4 break-words">سؤال ${index + 1}: ${question.text}</p>
+                    <p class="text-base text-gray-800 mb-4 break-words">سؤال ${index + 1}: ${question.text}</p>
                     <div class="space-y-2">
                         ${question.options.map((option, optIndex) => {
                             const optionText = typeof option === 'string' ? option : option.text;
-                            return `<div class="flex items-center p-2 rounded-lg">
-                                <input type="radio" name="question-${index}" value="${optionText}" class="form-radio text-blue-600 focus:ring-blue-500 ml-2">
-                                <label class="text-gray-700 text-sm">${optionText}</label>
+                            const optionId = `option-${index}-${optIndex}`;
+                            return `<div class="custom-radio p-2 rounded-lg">
+                                <input type="radio" id="${optionId}" name="question-${index}" value="${optionText}" class="form-radio">
+                                <label for="${optionId}" class="text-gray-700 text-sm">${optionText}</label>
                             </div>`;
                         }).join('')}
                     </div>
