@@ -491,21 +491,24 @@
                 
                 let optionsHtml = question.options.map((option, optIndex) => {
                     const optionText = typeof option === 'string' ? option : option.text;
+                    let containerClass = 'flex justify-between items-center p-2 rounded-lg';
                     let labelClass = 'text-gray-700 text-base';
                     let icon = '';
 
                     if (optIndex === correctAnswerIndex) {
-                        labelClass = 'text-green-700 text-base font-bold';
+                        containerClass += ' bg-green-100';
+                        labelClass = 'text-green-800 text-base font-bold';
                         icon = '<i class="fas fa-check-circle text-green-600 ml-2"></i>';
                     }
 
                     if (userAnswerIndex === optIndex && userAnswerIndex !== correctAnswerIndex) {
-                        labelClass = 'text-red-700 text-base font-bold';
+                        containerClass += ' bg-red-100';
+                        labelClass = 'text-red-800 text-base font-bold';
                         icon = '<i class="fas fa-times-circle text-red-600 ml-2"></i>';
                     }
                     
                     const optionId = `result-option-${index}-${optIndex}`;
-                    return `<div class="flex justify-between items-center p-2 rounded-lg">
+                    return `<div class="${containerClass}">
                                 <div class="custom-radio">
                                     <input type="radio" id="${optionId}" name="result-question-${index}" value="${optionText}" class="form-radio" ${userAnswerIndex === optIndex ? 'checked' : ''} disabled>
                                     <label for="${optionId}" class="${labelClass}">${optionText}</label>
