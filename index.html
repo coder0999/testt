@@ -544,6 +544,14 @@
 
         // مستمع لزر "إرسال الإجابات"
         submitExamBtn.addEventListener('click', () => {
+            const totalQuestions = currentExam.data.questions.length;
+            const answeredQuestions = document.querySelectorAll('#questions-container input[type="radio"]:checked').length;
+
+            if (answeredQuestions < totalQuestions) {
+                showCustomAlert('يجب الانتهاء من جميع الاسئلة قبل التسليم');
+                return; // Stop the submission
+            }
+
             const userAnswers = [];
             currentExam.data.questions.forEach((question, index) => {
                 const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
