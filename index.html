@@ -251,7 +251,6 @@
         // استيراد وظائف Firebase اللازمة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // تكوين Firebase
         const firebaseConfig = {
@@ -265,7 +264,6 @@
         
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
         
         // المتغيرات العالمية للوصول إليها
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tanya-thanawey';
@@ -277,7 +275,7 @@
         const examsPage = document.getElementById('exams-page');
         const evaluationsPage = document.getElementById('evaluations-page');
         const examView = document.getElementById('exam-view');
-        const resultsPage = document.getElementById('results-page'); // العنصر الجديد لصفحة النتائج
+        const resultsPage = document.getElementById('results-page');
         
         const examsList = document.getElementById('exams-list');
         const noExamsMessage = document.getElementById('no-exams-message');
@@ -285,8 +283,8 @@
         const examTitle = document.getElementById('exam-title');
         const submitExamBtn = document.getElementById('submit-exam-btn');
 
-        const resultsContainer = document.getElementById('results-container'); // حاوية النتائج
-        const backFromResultsBtn = document.getElementById('back-from-results-btn'); // زر العودة من النتائج
+        const resultsContainer = document.getElementById('results-container');
+        const backFromResultsBtn = document.getElementById('back-from-results-btn');
 
         const navExamsBtn = document.getElementById('nav-exams-btn');
         const navEvaluationsBtn = document.getElementById('nav-evaluations-btn');
@@ -351,24 +349,20 @@
         // دالة لتبديل عرض الصفحات
         function showPage(pageId) {
             window.scrollTo(0, 0);
-            // إخفاء جميع الصفحات أولاً
             examsPage.classList.add('hidden');
             evaluationsPage.classList.add('hidden');
             examView.classList.add('hidden');
             resultsPage.classList.add('hidden');
             
-            // إظهار الصفحة المطلوبة
             const activePage = document.getElementById(pageId);
             if (activePage) activePage.classList.remove('hidden');
 
-            // إظهار أو إخفاء شريط التنقل
             if (pageId === 'exam-view' || pageId === 'results-page') {
                 bottomNav.classList.add('hidden');
             } else {
                 bottomNav.classList.remove('hidden');
             }
 
-            // تحديث أزرار التنقل
             navExamsBtn.classList.remove('text-blue-600', 'font-bold');
             navExamsBtn.classList.add('text-gray-500');
             navEvaluationsBtn.classList.remove('text-blue-600', 'font-bold');
@@ -385,7 +379,6 @@
             }
         }
 
-        // مستمعو أحداث التنقل
         navExamsBtn.addEventListener('click', () => showPage('exams-page'));
         navEvaluationsBtn.addEventListener('click', () => showPage('evaluations-page'));
 
@@ -405,7 +398,6 @@
             }
         }
 
-        // وظيفة لعرض بطاقات الامتحانات
         function renderExamCards(exams) {
             examsList.innerHTML = '';
             if (exams.length === 0) {
@@ -428,12 +420,11 @@
             }
         }
 
-        // وظيفة لعرض صفحة الامتحان
         function startExam(exam) {
-            currentExam = exam; // حفظ الامتحان الحالي
+            currentExam = exam;
             showPage('exam-view');
-            examTitle.innerHTML = '&nbsp;'; // Clear title but keep space for layout
-            questionsContainer.className = 'space-y-8'; // Add more space for the number box
+            examTitle.innerHTML = '&nbsp;';
+            questionsContainer.className = 'space-y-8';
             questionsContainer.innerHTML = '';
 
             exam.data.questions.forEach((question, index) => {
@@ -459,7 +450,6 @@
             });
         }
         
-        // وظيفة جديدة لعرض صفحة النتائج
         function showResultsPage(exam, userAnswers) {
             showPage('results-page');
             resultsContainer.className = 'space-y-8';
@@ -470,8 +460,7 @@
 
             exam.data.questions.forEach((question, index) => {
                 const userAnswer = userAnswers[index];
-                
-                let correctAnswerIndex = question.correctAnswer; 
+                let correctAnswerIndex = question.correctAnswer;
                 let userAnswerIndex = -1;
 
                 if (userAnswer) {
@@ -539,10 +528,8 @@
             resultsContainer.prepend(summaryElement);
         }
         
-        // مستمع لزر "العودة"
         backFromResultsBtn.addEventListener('click', () => showPage('exams-page'));
 
-        // مستمع لزر "إرسال الإجابات"
         submitExamBtn.addEventListener('click', () => {
             const totalQuestions = currentExam.data.questions.length;
             const answeredQuestions = document.querySelectorAll('#questions-container input[type="radio"]:checked').length;
@@ -565,51 +552,29 @@
             showResultsPage(currentExam, userAnswers);
         });
         
-        // --- المصادقة وتحميل البيانات ---
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                showCustomAlert('الرجاء تسجيل الدخول لعرض الامتحانات.');
-            }
-        });
-
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                if (!unsubscribeFromExams) {
-                    renderSkeletonCards(); // Show skeleton loader
-                    const examsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
-                    
-                    unsubscribeFromExams = onSnapshot(examsCollection, (snapshot) => {
-                        const exams = [];
-                        snapshot.forEach(doc => {
-                            exams.push({
-                                id: doc.id,
-                                data: doc.data()
-                            });
-                        });
-                        renderExamCards(exams);
-                    }, (error) => {
-                        console.error("خطأ في جلب الامتحانات:", error);
-                        showCustomAlert('فشل في جلب قائمة الامتحانات.');
-                        examsList.innerHTML = '<p class="text-center text-red-500 col-span-full">فشل تحميل الامتحانات.</p>';
+        // --- Data Loading --- 
+        function startDataListeners() {
+            if (!unsubscribeFromExams) {
+                renderSkeletonCards();
+                const examsCollection = collection(db, `artifacts/${appId}/public/data/exams`);
+                
+                unsubscribeFromExams = onSnapshot(examsCollection, (snapshot) => {
+                    const exams = [];
+                    snapshot.forEach(doc => {
+                        exams.push({ id: doc.id, data: doc.data() });
                     });
-                }
-            } else {
-                if (unsubscribeFromExams) {
-                    unsubscribeFromExams();
-                    unsubscribeFromExams = null;
-                }
-                if (unsubscribeFromSubjects) {
-                    unsubscribeFromSubjects();
-                    unsubscribeFromSubjects = null;
-                }
-                examsList.innerHTML = '';
-                const subjectsContainer = document.getElementById('subjects-container');
-                if (subjectsContainer) subjectsContainer.innerHTML = '';
+                    renderExamCards(exams);
+                }, (error) => {
+                    console.error("خطأ في جلب الامتحانات:", error);
+                    showCustomAlert('فشل في جلب قائمة الامتحانات.');
+                    examsList.innerHTML = '<p class="text-center text-red-500 col-span-full">فشل تحميل الامتحانات.</p>';
+                });
             }
-        });
+        }
         
-        // عرض صفحة الامتحانات بشكل افتراضي عند تحميل الصفحة
+        // --- Initial Load ---
         showPage('exams-page');
+        startDataListeners();
 
     </script>
 </body>
