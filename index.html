@@ -22,7 +22,7 @@
             right: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: #f3f4f6;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -152,11 +152,19 @@
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
 
+            <!-- Progress Bar Overlay -->
+    <div id="progress-bar-overlay" class="fixed top-0 left-0 w-full h-full bg-gray-100 flex flex-col justify-center items-center hidden" style="z-index: 3000;">
+        <div class="w-3/4 max-w-lg bg-gray-300 rounded-full h-2.5">
+            <div id="progress-bar-element" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+        <p class="text-lg text-black mt-4">...جاري تحميل الامتحان</p>
+    </div>
+
     <!-- المحتوى الرئيسي للتطبيق -->
-    <div class="flex-grow flex flex-col p-2 mb-20">
+    <div id="app-container" class="flex-grow flex flex-col p-2 mb-20 hidden">
 
         <!-- صفحة الامتحانات (عرض البطاقات) -->
-        <div id="exams-page" class="container mx-auto p-4 flex-grow">
+        <div id="exams-page" class="container mx-auto p-4 flex-grow hidden">
             <h1 class="text-4xl font-bold text-center text-gray-800 my-8">الامتحانات المتاحة</h1>
             <div id="exams-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- سيتم عرض بطاقات الامتحانات هنا بواسطة JavaScript -->
@@ -573,8 +581,58 @@
         }
         
         // --- Initial Load ---
-        showPage('exams-page');
-        startDataListeners();
+        const appContainer = document.getElementById('app-container');
+        const progressBarOverlay = document.getElementById('progress-bar-overlay');
+        const progressBarElement = document.getElementById('progress-bar-element');
+        const urlParams = new URLSearchParams(window.location.search);
+        const examIdFromUrl = urlParams.get('examId');
+
+        if (examIdFromUrl) {
+            // If an examId is in the URL, show the progress bar and fetch the exam.
+            progressBarOverlay.classList.remove('hidden');
+            bottomNav.classList.add('hidden'); // Hide nav while loading a direct exam
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 1;
+                if (progress <= 95) { // Animate up to 95%
+                    progressBarElement.style.width = `${progress}%`;
+                }
+            }, 40); // Update every 40ms
+
+            const examDocRef = doc(db, `artifacts/${appId}/public/data/exams`, examIdFromUrl);
+            getDoc(examDocRef).then(docSnap => {
+                clearInterval(interval); // Stop the animation
+                progressBarElement.style.width = '100%'; // Complete the bar
+
+                setTimeout(() => {
+                    progressBarOverlay.classList.add('hidden');
+                    appContainer.classList.remove('hidden'); // Show the main content
+                    if (docSnap.exists()) {
+                        const exam = { id: docSnap.id, data: docSnap.data() };
+                        startExam(exam);
+                    } else {
+                        showCustomAlert('الامتحان المطلوب غير موجود.');
+                        showPage('exams-page');
+                        startDataListeners();
+                    }
+                }, 400); // Wait a moment at 100% before hiding
+
+            }).catch(error => {
+                clearInterval(interval); // Stop the animation on error
+                progressBarOverlay.classList.add('hidden');
+                appContainer.classList.remove('hidden'); // Also show container on error
+                console.error("Error fetching specific exam:", error);
+                showCustomAlert('حدث خطأ في تحميل الامتحان.');
+                showPage('exams-page');
+                startDataListeners();
+            });
+        } else {
+            // If no examId is in the URL, show the default page with all exams.
+            appContainer.classList.remove('hidden');
+            showPage('exams-page');
+            startDataListeners();
+        }
 
     </script>
 </body>
